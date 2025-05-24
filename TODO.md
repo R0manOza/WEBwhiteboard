@@ -1,4 +1,4 @@
-# [ ] Phase 0: Project Setup & Foundational Tools
+# - [ ] Phase 0: Project Setup & Foundational Tools
 - [ ] **Setup Monorepo (Optional, but good for managing frontend/backend together - e.g., using Lerna/Nx/Turborepo or just npm/yarn workspaces).**
 - [ ] **Initialize Backend Project (Node.js, TypeScript, Express.js, ESLint, Prettier).**
     -   [ ] Test:  Basic "hello world" endpoint test using Supertest.
@@ -19,7 +19,7 @@
 ---
 
 ---
-# [ ] Phase 1: User Authentication & Basic Profile
+# - [ ] Phase 1: User Authentication & Basic Profile
 ## * [ ]  **Feature: User Authentication (Google OAuth via Firebase)**
 * 
     * [ ]  **Backend Task:** Create API endpoint `/api/auth/login` to verify Firebase ID Token.
@@ -42,7 +42,7 @@
             * [ ]  `it('should clear user session/info in frontend state')`
 
 ---
-# [ ] Phase 2: Core Whiteboard & Real-time Cursor Sync (MVP Real-time)
+# - [ ] Phase 2: Core Whiteboard & Real-time Cursor Sync (MVP Real-time)
  ## [ ] **Feature: Basic Board Data Structure & API**
  * 
     * [ ]  **Backend Task:** Define `Board` data model (ID, name - keep it simple initially).
@@ -63,7 +63,7 @@
             * [ ]  `it('should require authentication')`
             * [ ] `it('should return a list of boards owned by/member of the user')`
 ---
-##  [ ]  **Feature: Real-time Board Connection & Cursor Sync**
+## - [ ]  **Feature: Real-time Board Connection & Cursor Sync**
 *   
     * [ ] **Backend Task:** WebSocket: Handle `joinBoardRoom { boardId, token }`.
         * [ ]  **Test (Unit - Mocha/Chai with WebSocket test client):**
@@ -97,7 +97,7 @@
             * [ ]  `it('should fetch board data from API when mounted with a boardId')`
 
 ---
-# [ ] Phase 3: Containers - Creation and Basic Real-time Sync
+# - [ ] Phase 3: Containers - Creation and Basic Real-time Sync
 ## [ ]   **Feature: Container Data Structure & API**
 *   
     * [ ]  **Backend Task:** Define `Container` data model (ID, boardId, title, position, size, type - start with "notes").
@@ -118,7 +118,7 @@
             * [ ]  `it('should call the correct service function and return appropriate response/status')`
             * [ ]  Test edge cases (board not found, container not found, invalid input).
 ---
-## [ ] **Feature: Real-time Container Sync**
+## - [ ] **Feature: Real-time Container Sync**
 *  
     * [ ]  **Backend Task:** Modify API handlers for containers to broadcast WebSocket events after successful DB operations.
         * [ ]  `containerAdded { boardId, containerData }`
@@ -150,8 +150,8 @@
             * [ ]  `it('should call PUT /api/.../containers/:id with new size on resize end (debounced)')` (mock API)
 ---
 ---
-# [ ] Phase 4: Items (Notes) - Creation and Basic Real-time Sync
-## [ ]  **Feature: Note Item Data Structure & API**
+# - [ ] Phase 4: Items (Notes) - Creation and Basic Real-time Sync
+## - [ ]  **Feature: Note Item Data Structure & API**
 *   
     * [ ]  **Backend Task:** Define `NoteItem` data model (ID, containerId, title, content).
     * [ ]  **Backend Task:** Firestore service for note item CRUD.
@@ -163,9 +163,9 @@
         * [ ]  `DELETE /api/boards/:boardId/containers/:containerId/items/:itemId`
         * [ ]  **Test (API - Supertest):** (Similar to container API tests)
 ---       
-## [ ]  **Feature: Real-time Note Item Sync**
+## - [ ]  **Feature: Real-time Note Item Sync**
 *   
-    * [ ]  **Backend Task:** Modify API handlers for items to broadcast WebSocket events.
+    * -  [ ]  **Backend Task:** Modify API handlers for items to broadcast WebSocket events.
         * [ ]  `itemAdded { boardId, containerId, itemData }`
         * [ ]  `itemUpdated { boardId, containerId, itemId, updatedItemData }`
         * [ ]  `itemDeleted { boardId, containerId, itemId }`
@@ -181,8 +181,8 @@
         * [ ]  **Test (Component - RTL):**
     
 ---
-# [ ] Phase 5: Link Items - Creation and Basic Real-time Sync
-## [ ]  **Feature: Link Item Data Structure & API** (Similar to Note Items, but with URL, link title, description fields)
+# -  [ ] Phase 5: Link Items - Creation and Basic Real-time Sync
+## -  [ ]  **Feature: Link Item Data Structure & API** (Similar to Note Items, but with URL, link title, description fields)
 *   
     * [ ]  **Backend Task:** Define `LinkItem` data model.
     * [ ]  **Backend Task:** Firestore service for link item CRUD.
@@ -199,8 +199,8 @@
 
 ---
 ---
-# [ ] Phase 6: Board Management & Roles
-## [ ]  **Feature: Board Settings (Name, Description, Visibility, Password for Private)**
+# - [ ] Phase 6: Board Management & Roles
+##  [ ]  **Feature: Board Settings (Name, Description, Visibility, Password for Private)**
 *   
     * [ ]  **Backend Task:** Extend `Board` model.
     * [ ]  **Backend Task:** Extend `PUT /api/boards/:boardId` to handle these settings. Implement password hashing for private boards.
@@ -232,7 +232,7 @@
 
 ---
 ---
-## [ ] Phase 7: UI Polish, Search, Sidebar & Dashboard
+## -  [ ] Phase 7: UI Polish, Search, Sidebar & Dashboard
 ## [ ] **Feature: Dashboard View**
 *  
     * [ ]  **Frontend Task:** Implement Dashboard to list public boards and user's private/member boards.
@@ -252,7 +252,7 @@
 
 ---
 ---
-## [ ] Phase 8: Error Handling, Testing Refinement & Deployment
+## - [ ] Phase 8: Error Handling, Testing Refinement & Deployment
 
 * [ ]  **Task:** Comprehensive Error Handling.
     * [ ]  **Backend:** Consistent error responses from API. Graceful error handling in WebSocket logic.
