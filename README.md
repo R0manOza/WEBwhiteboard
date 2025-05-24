@@ -1,3 +1,2 @@
-# WEBwhiteboard development and testing branch 
-
-
+# WEBwhiteboard
+Collaborative whiteboard WEb application
