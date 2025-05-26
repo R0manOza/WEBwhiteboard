@@ -1,16 +1,16 @@
 {
   "compilerOptions": {
-    /* Basic Options */
-    "target": "ES2020",                       /* Specify ECMAScript target version. ES2020 is a good modern default for Node.js. */
-    "module": "commonjs",                     /* Specify module code generation: 'commonjs' for Node.js. */
-    "lib": ["ES2020"],                        /* Specify library files to be included in the compilation. */
-    "outDir": "./dist",                       /* Redirect output structure to the directory. This is where your compiled JS will go. */
-    "rootDir": "./src",                       /* Specify the root directory of input files. Your TS code will live in 'src'. */
-    "strict": true,                           /* Enable all strict type-checking options. Highly recommended. */
-    "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. */
-    "skipLibCheck": true,                     /* Skip type checking of declaration files. */
-    "forceConsistentCasingInFileNames": true, /* Disallow inconsistently-cased references to the same file. */
-    "resolveJsonModule": true,                /* Include modules imported with .json extension. */
+    
+    "target": "ES2020",                       
+    "module": "commonjs",                     
+    "lib": ["ES2020"],                        
+    "outDir": "./dist",                      
+    "rootDir": "./src",                      
+    "strict": true,                          
+    "esModuleInterop": true,                
+    "skipLibCheck": true,                     
+    "forceConsistentCasingInFileNames": true, 
+    "resolveJsonModule": true,                
 
    
     "moduleResolution": "node",              
@@ -28,3 +28,14 @@
     
   ]
 }
+//explanation of the tsconfig.json options used in this file: if added or changed something please explain and added here 
+//"target": "ES2020": Compiles to a modern JavaScript version suitable for recent Node.js versions.
+// "module": "commonjs": Essential for Node.js, which uses CommonJS modules (require/module.exports).
+// "outDir": "./dist": Your compiled JavaScript files will be placed in a dist folder.
+// "rootDir": "./src":  TypeScript source code should live in a src folder at the root of your backend directory.
+// "strict": true": Enables all strict type-checking options. Highly recommended for catching errors early.
+// "esModuleInterop": true": Helps with importing CommonJS modules that might not have default exports in a way that feels more ES6-like.
+// "baseUrl": "." and "paths": { "@/*": ["src/*"] }: This is optional but very convenient. It allows you to use absolute-like paths for imports from your src directory, e.g., import { userService } from '@/services/user'; instead of ../../services/user.
+// "sourceMap": true": Generates source maps, which are crucial for debugging your TypeScript code (it maps the compiled JS back to your TS).
+// "include": ["src/**/*"]: Tells TypeScript to only compile files within the src directory.
+// "exclude": Excludes node_modules, the dist output folder, and optionally your test files (if you compile them separately or not at all for tests run with ts-node).
