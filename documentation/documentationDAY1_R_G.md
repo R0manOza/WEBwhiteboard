@@ -59,6 +59,7 @@ This directory contains the Node.js, Express.js, and TypeScript backend service 
     The server will typically start on `http://localhost:3001` (or the port specified by the `PORT` environment variable). You should see a log message confirming Firebase Admin SDK initialization.
 
 ## Directory Structure (Key Folders , will change later , when it does please document it here )
+```ts
 backend/
 ├── config/ # Configuration files (.env and firebase.json)
 ├── dist/ # Compiled JavaScript output  
@@ -74,7 +75,7 @@ backend/
 ├── package-lock.json
 ├── package.json
 └── tsconfig.json # TypeScript compiler configuration
-
+```
 
 ## TypeScript Configuration (`tsconfig.json`)
 
