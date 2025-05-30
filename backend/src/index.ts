@@ -10,7 +10,7 @@ import express, { Express, Request, Response } from 'express';
 const app: Express = express();
 const port = process.env.PORT || 3001; // Backend port
 // Example of where you might use it later (not for this specific task)
-
+import authRoutes from './routes/authRoutes';
 
 app.post('/api/verifyToken', async (req, res) => {
   const idToken = req.body.token;
@@ -27,6 +27,9 @@ app.post('/api/verifyToken', async (req, res) => {
 app.get('/api/health', (req: Request, res: Response) => {
   res.send('Backend is healthy and running!');
 });
+
+app.use('/api/auth', authRoutes);
+
 
 app.listen(port, () => {
   console.log(`[server]: Backend server is running at http://localhost:${port}`);
