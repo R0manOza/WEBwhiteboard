@@ -365,7 +365,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Board dashboard and real-time UI foundation
 
 **Tasks:**
-- [ ] **Day 1**: Create board dashboard component
+- [X] **Day 1**: Create board dashboard component
   ```typescript
   // src/components/Dashboard.tsx
   export const Dashboard = () => {
@@ -384,7 +384,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 2**: Create board view component with canvas
+- [X] **Day 2**: Create board view component with canvas
   ```typescript
   // src/components/Board/BoardCanvas.tsx
   export const BoardCanvas = ({ boardId }) => {
