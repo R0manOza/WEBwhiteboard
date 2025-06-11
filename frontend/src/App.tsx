@@ -1,4 +1,5 @@
-import React from 'react';
+//import React from 'react'; // commented out to avoid warning during building 
+//tornike roca a iyeneb imports reactisas comment it out to mere ginda gamoiyeno
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import HomePage from './pages/HomePage';       // Need to create
 import LoginPage from './pages/LoginPage';     // Need to create
