@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth,GoogleAuthProvider} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 
@@ -25,5 +25,6 @@ if (!getApps().length) {
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
-export { app, auth, db };
+export { app, auth, db, googleProvider };
