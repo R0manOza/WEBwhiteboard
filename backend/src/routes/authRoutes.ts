@@ -105,23 +105,6 @@ router.get('/userInfo', verifyTokenMiddleware, async (req: AuthenticatedRequest,
     }
 });
 
-import bcrypt from 'bcrypt'; // bonus points stuff
-const saltRounds = 10; // bonus points stuff
-
-router.post('/hash', async (req: Request, res: Response) => {
-  const { textToHash } = req.body;
-  try {
-    const hashedPassword = await bcrypt.hash(textToHash, saltRounds);
-
-    res.json({
-      originalString: textToHash,
-      algorithm: 'bcrypt',
-      hash: hashedPassword
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Hashing failed.' });
-  }
-});
 
 
 export default router;
