@@ -161,11 +161,11 @@ Build a multi-user, real-time collaborative web application where users can orga
   npm install firebase socket.io-client uuid
   npm install --save-dev @testing-library/react @testing-library/jest-dom vitest jsdom
   ```
-- [ ] Setup Firebase Client SDK configuration
-- [ ] Create basic routing structure (Dashboard, Board View, Auth)
-- [ ] Setup CSS framework or styled-components for Teams-like UI
-- [ ] Create basic App component with routing
-- [ ] **Test Goal**: App renders with navigation and basic layout
+- [X] Setup Firebase Client SDK configuration
+- [X] Create basic routing structure (Dashboard, Board View, Auth)
+- [X] Setup CSS framework or styled-components for Teams-like UI
+- [X] Create basic App component with routing
+- [X] **Test Goal**: App renders with navigation and basic layout
 
 **Learning Focus**: Vite + React setup, Firebase Client SDK, modern React patterns
 
@@ -185,7 +185,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Firebase Admin SDK integration and secure authentication flow
 
 **Tasks:**
-- [ ] **Day 1**: Setup Firebase project and Admin SDK
+- [X] **Day 1**: Setup Firebase project and Admin SDK
   ```typescript
   // src/config/firebase.ts
   import admin from 'firebase-admin';
@@ -198,7 +198,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   export const firestore = admin.firestore();
   ```
 
-- [ ] **Day 2**: Create authentication middleware
+- [X] **Day 2**: Create authentication middleware
   ```typescript
   // src/middleware/auth.ts
   export const verifyToken = async (req, res, next) => {
@@ -213,7 +213,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 3**: Create auth endpoints
+- [X] **Day 3**: Create auth endpoints
   ```typescript
   // src/routes/auth.ts
   router.post('/login', async (req, res) => {
@@ -226,15 +226,15 @@ Build a multi-user, real-time collaborative web application where users can orga
   ```
 
 **Tests to Write:**
-- [ ] `it('should verify valid Firebase ID tokens')`
-- [ ] `it('should reject invalid tokens')`
-- [ ] `it('should protect routes requiring authentication')`
+- [X] `it('should verify valid Firebase ID tokens')`
+- [X] `it('should reject invalid tokens')`
+- [X] `it('should protect routes requiring authentication')`
 
 ### Developer B - Frontend Authentication (Days 1-3)
 **Primary Focus**: Google OAuth integration and user session management
 
 **Tasks:**
-- [ ] **Day 1**: Setup Firebase configuration
+- [X] **Day 1**: Setup Firebase configuration
   ```typescript
   // src/config/firebase.ts
   import { initializeApp } from 'firebase/app';
@@ -245,7 +245,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   export const googleProvider = new GoogleAuthProvider();
   ```
 
-- [ ] **Day 2**: Create authentication context
+- [X] **Day 2**: Create authentication context
   ```typescript
   // src/contexts/AuthContext.tsx
   export const AuthProvider = ({ children }) => {
@@ -256,7 +256,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 3**: Create login/logout components
+- [X] **Day 3**: Create login/logout components
   ```typescript
   // src/components/auth/LoginButton.tsx
   export const LoginButton = () => {
@@ -273,9 +273,9 @@ Build a multi-user, real-time collaborative web application where users can orga
   ```
 
 **Tests to Write:**
-- [ ] `it('should render login button when user not authenticated')`
-- [ ] `it('should call Firebase signInWithPopup on button click')`
-- [ ] `it('should store user session after successful login')`
+- [X] `it('should render login button when user not authenticated')`
+- [X] `it('should call Firebase signInWithPopup on button click')`
+- [X] `it('should store user session after successful login')`
 
 ### Developer C - Auth Integration (Days 4-5)
 **Primary Focus**: End-to-end authentication flow and protected routes

@@ -21,13 +21,14 @@ function LoginPage() {
   const provider = new GoogleAuthProvider();
    
    try { 
+        console.log('Starting Google sign-in process...');
          // 1. Sign in with Google via Firebase popup
          const result : UserCredential = await signInWithPopup(auth , provider);
          const user = result.user;
           
          if(user){
          // 2get the id token from firebase
-         
+        console.log('Firebase user signed in:', user);
         const IdTokenResultObject : IdTokenResult = await user.getIdTokenResult();
         console.log('IdTokenResult Object:', IdTokenResultObject);
         const tokenString = IdTokenResultObject.token; // Extracted the actual token string
@@ -47,7 +48,7 @@ function LoginPage() {
           headers: {
             'Content-Type' : 'application/json',
           },
-          body: JSON.stringify({ requestBody}),
+          body: JSON.stringify( requestBody),
 
         });
 
