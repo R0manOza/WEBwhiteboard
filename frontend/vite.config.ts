@@ -1,30 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
-   test: { // <--- Ensure this block exists
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.ts',
-  },
   server: {
-    proxy: {
-      // Proxy /api requests to  backend server
+    proxy: { // Your existing proxy (ensure it's correct)
       '/api': {
-        target: 'http://localhost:3001', // backend URL
+        target: 'http://localhost:3001',
         changeOrigin: true,
-
-        
-       
       },
-      
     },
-     headers: {
-     
+    headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-      'Cross-Origin-Embedder-Policy': 'require-corp', 
+      
     },
   },
 })
