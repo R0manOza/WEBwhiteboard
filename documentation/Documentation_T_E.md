@@ -131,3 +131,6 @@ It sets `loading` to `false` in `finally`.
 ### New Problems
 Well we hit another wall, even though I tested AuthContext (basic stuf with mocikng logins to test if it was actualy working) when I tried to test it on our website I got surprise visit from someone Roma has been fighting for a long time. Maybe not today meybe not tomorrow but eventually I hope we will beat it.
 ![MainEnemy](MainEnemy.png)
+
+### new problem fixed? kinda but not really 
+this cross problem has been after me this whole project it ruined my productivity , and yet i couldn't fix it . even tho now frontend finnaly is able to get the token and send it to backend that error still pops up , 80% of the time it's not a problem , but sometimes it causes front not to send the token to the back , anyhow , for now this should work 
