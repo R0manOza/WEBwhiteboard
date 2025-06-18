@@ -133,4 +133,4 @@ Well we hit another wall, even though I tested AuthContext (basic stuf with moci
 ![MainEnemy](MainEnemy.png)
 
 ### new problem fixed? kinda but not really 
-this cross problem has been after me this whole project it ruined my productivity , and yet i couldn't fix it . even tho now frontend finnaly is able to get the token and send it to backend that error still pops up , 80% of the time it's not a problem , but sometimes it causes front not to send the token to the back , anyhow , for now this should work 
+ROMA: this cross problem has been after me this whole project it ruined my productivity , and yet i couldn't fix it . even tho now frontend finnaly is able to get the token and send it to backend that error still pops up , 80% of the time it's not a problem , but sometimes it causes front not to send the token to the back , anyhow , for now this should work 
