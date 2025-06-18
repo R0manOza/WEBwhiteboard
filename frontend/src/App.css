@@ -1,4 +1,3 @@
-/* frontend/src/styles/App.css */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -24,33 +23,121 @@ body {
   width: 100%;
 }
 
+/* --- Navigation Bar Styles --- */
 nav {
-    padding: 0.75rem 1rem; /* Slightly less padding */
-    background-color: #ffffff; /* White navigation */
-    border-bottom: 1px solid #e1dfdd; /* Subtle border */
-    box-shadow: 0 1px 0 rgba(0,0,0,0.05); /* Subtle shadow */
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e1dfdd;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+
+  /* --- Flexbox for Main Layout --- */
+  display: flex; /* Make the nav a flex container */
+  justify-content: space-between; /* Pushes .nav-left to the start, .nav-right to the end */
+  align-items: center; /* Vertically centers content within the nav */
+  width: 100%; /* Ensure nav takes full width */
+  box-sizing: border-box; /* Include padding/border in width calculation */
 }
 
-nav a {
-    margin-right: 1rem;
-    text-decoration: none;
-    color: #0078d4; /* Teams-like blue */
-    font-weight: 500;
+/* --- Styles for Left and Right Sections within Nav --- */
+.nav-left,
+.nav-right {
+    display: flex; /* Make these containers flex containers too to align items within them */
+    align-items: center; /* Vertically center items */
+    /* Use gap for spacing *between* items within these sections */
+    gap: 1rem; /* Add space between elements in the left/right nav sections */
 }
 
-nav a:hover {
-    text-decoration: underline;
+/* General style for Link components within the nav */
+nav a.nav-link {
+  /* Removed margin-right here because gap on .nav-left/.nav-right handles spacing */
+  text-decoration: none;
+  color: #0078d4;
+  font-weight: 500;
+  white-space: nowrap; /* Prevent links from wrapping */
 }
 
+nav a.nav-link:hover {
+  text-decoration: underline;
+}
+
+
+/* --- Styles for Logged-in User Info Section (in .nav-right) --- */
+.user-info {
+  display: flex; /* Arrange picture, name, and sign-out button side-by-side */
+  align-items: center; /* Vertically center items */
+  gap: 0.5rem; /* Space between items in the user info block */
+  font-size: 0.9rem;
+  color: #323130; /* Text color */
+   white-space: nowrap; /* Prevent user info block from wrapping */
+}
+
+.user-avatar {
+  width: 24px; /* Size for avatar */
+  height: 24px;
+  border-radius: 50%; /* Make it round */
+  object-fit: cover; /* Ensure image covers the area */
+  border: 1px solid #e1dfdd; /* Subtle border */
+  flex-shrink: 0; /* Prevent avatar from shrinking */
+}
+
+.user-name {
+  font-weight: 600;
+   /* text-overflow: ellipsis; Hide overflow with ellipsis if name is too long */
+   /* overflow: hidden; */
+   /* max-width: 100px; Set max width if needed */
+}
+
+/* Style for the Sign Out button (in .nav-right, likely within or next to .user-info) */
+button.sign-out-button { /* Targeting button specifically with the class */
+    background: none; /* Remove default button background */
+    border: none; /* Remove default button border */
+    color: #0078d4; /* Use brand color */
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0; /* Remove default padding */
+    text-decoration: underline; /* Make it look like a link */
+    white-space: nowrap; /* Prevent button text from wrapping */
+}
+
+button.sign-out-button:hover {
+    color: #005a9e; /* Darker blue on hover */
+}
+
+
+/* Style for loading text in nav (in .nav-right) */
+span.nav-status { /* Targeting span specifically with the class */
+    font-size: 0.9rem;
+    color: #605e5c; /* Muted color */
+     white-space: nowrap; /* Prevent text from wrapping */
+}
+
+/* --- Page Content Styles --- */
 .page-content {
-    flex-grow: 1; /* Allows content area to take up remaining space */
-    padding: 1rem;
-    /* For the board view later, this will be the canvas */
+  flex-grow: 1; /* Allows content area to take up remaining vertical space */
+  padding: 1rem;
 }
 
-h1, h2, h3, h4, h5, h6 {
-    margin-top: 0;
-    margin-bottom: 1rem;
+/* --- Basic Button Styles (Optional) --- */
+/* Add general button styles if needed, but sign-out-button is styled above */
+button {
+    /* Basic button styles */
+    padding: 0.5rem 1rem;
+    border: 1px solid #0078d4;
+    background-color: #0078d4;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
     font-weight: 600;
-    color: #323130;
+    transition: background-color 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+    background-color: #005a9e;
+    border-color: #005a9e;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
