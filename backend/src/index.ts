@@ -1,5 +1,11 @@
 import express, { Express, Request, Response } from 'express';
- import admin from './config/firebaseAdmin';
+import cors from 'cors'; // Import cors middleware
+import admin from './config/firebaseAdmin';
+
+import authRoutes from './routes/authRoutes';
+
+const app: Express = express();
+const port = process.env.PORT || 3001; // Backend port
 
 //usefull features of express
 //app.get('/users', getAllUsers);
@@ -8,33 +14,36 @@ import express, { Express, Request, Response } from 'express';
 // app.delete('/users/:id', deleteUser);
 //app.use(express.json()); // Parse JSON bodies
 // app.use('/api', authMiddleware); // Require auth for /api routes
-const app: Express = express();
-const port = process.env.PORT || 3001; // Backend port
-// Example of where you might use it later (not for this specific task)
-import authRoutes from './routes/authRoutes';
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Replace with your frontend's actual origin(s) in production
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
+};
+app.use(cors(corsOptions));
+// --- End CORS Middleware ---
 
 
-app.use(express.json());
+app.use(express.json()); // Parse JSON bodies
 
-app.post('/api/verifyToken', async (req, res) => {
-  const idToken = req.body.token;
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
-    res.json({ uid: decodedToken.uid });
-  } catch (error) {
-    res.status(401).send('Unauthorized');
-    
-  }
-});
+// Remove or comment out this potentially redundant endpoint
+// app.post('/api/verifyToken', async (req, res) => {
+//   const idToken = req.body.token;
+//   try {
+//     const decodedToken = await admin.auth().verifyIdToken(idToken);
+//
+//     res.json({ uid: decodedToken.uid });
+//   } catch (error) {
+//     res.status(401).send('Unauthorized');
+//
+//   }
+// });
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.send('Backend is healthy and running!');
 });
 
 
-
-//bonus points stuff ends here
+// Use the auth routes
 app.use('/api/auth', authRoutes);
 
 

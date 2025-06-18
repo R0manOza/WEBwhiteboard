@@ -1,186 +1,175 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-// Import specific functions from firebase/auth (reduce bundle size)
-import { type User, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth, googleProvider} from '../firebase/config'; // Import configured auth and provider instances
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import {
+  type User,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { auth, googleProvider } from "../firebase/config";
 
-// Define the shape of the AuthContext state and actions
 interface AuthContextType {
-  user: User | null; // The Firebase User object, null if not logged in
-  loading: boolean; // True while checking auth status or performing auth operations
-  login: () => Promise<void>; // Function to trigger the login flow
-  logout: () => Promise<void>; // Function to trigger the logout flow
+  user: User | null;
+  loading: boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   // TODO: Could add an error state here later
 }
 
-// Create the context with an initial null value.
-// The type assertion 'as any' or providing a default value is often needed for React Context.
-// A common pattern is to throw an error in the default value if the hook is used outside the provider.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Custom hook to easily consume the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  // If context is undefined, it means the hook was used outside the AuthProvider
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
-// Auth Provider component that wraps the application
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  // Start in a loading state while we check for existing sessions
-  const [loading, setLoading] = useState(true); 
-  // TODO: Add state for error messages if needed
+  const [loading, setLoading] = useState(true);
 
-  // Effect to handle initial authentication state check (Firebase persistence)
+  console.log('AuthContext: Provider rendering. Current user:', !!user, 'loading:', loading);
+
   useEffect(() => {
-    // onAuthStateChanged is the primary way to observe auth state changes,
-    // including initial load and session persistence.
+    console.log('AuthContext: useEffect running (setting up auth state listener)');
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('AuthContext: onAuthStateChanged fired. firebaseUser:', !!firebaseUser);
+
       if (firebaseUser) {
-        // Firebase reports a user is logged in (could be a fresh login or persistent session)
         console.log('AuthContext: Firebase user detected:', firebaseUser.uid);
-        
+
         // --- Backend Verification Step ---
-        // Important for security and syncing user info/roles from backend DB.
+        // Use the /api prefix so Vite's proxy handles the request during development
+        // This path matches the backend router mounting point: app.use('/api/auth', ...)
+        const backendLoginUrl = '/api/auth/login';
+        // REMOVED THE LOG THAT SHOWED THE HARDCODED URL TO AVOID CONFUSION
+        console.log('AuthContext: Attempting verification with backend URL:', backendLoginUrl); // This log should now show '/api/auth/login'
+
         try {
             const idToken = await firebaseUser.getIdToken();
-            console.log('AuthContext: Verifying Firebase ID token with backend...');
-            // Call your backend's login/verify endpoint
-            // Use environment variable for the backend API URL (Developer C task)
-            const backendResponse = await fetch(`${import.meta.env.VITE_BACKEND_API_URL}/auth/login`, {
+            console.log('AuthContext: Got ID token. Sending to backend...');
+
+            // USE THE CORRECT PROXY URL HERE
+            const backendResponse = await fetch(backendLoginUrl, { // <--- THIS LINE MUST USE backendLoginUrl
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Although the spec says to send the token in the body for /auth/login,
-                    // for *subsequent* protected routes, it will be in the Authorization header.
-                    // Sending it in the body here matches the backend spec provided earlier.
                 },
                 body: JSON.stringify({ idToken }),
             });
 
+            console.log('AuthContext: Backend verification fetch response status:', backendResponse.status);
+
             if (!backendResponse.ok) {
-                // Backend rejected the token or login (e.g., user deleted in backend, invalid token)
                 console.error('AuthContext: Backend login verification failed:', backendResponse.status);
-                 // Force Firebase sign out to clear potentially inconsistent state
-                await signOut(auth); 
-                setUser(null); // Ensure context state is null
-                // TODO: Handle/expose backend error message
+                // Log response body for more details if it's not JSON (like a 404 HTML page)
+                try {
+                    const errorBody = await backendResponse.json(); // This will likely fail for 404 HTML
+                    console.error('AuthContext: Backend error body:', errorBody);
+                } catch (e) {
+                     // Log the response text if JSON parsing failed (common for 404/500)
+                    const errorText = await backendResponse.text();
+                    console.error('AuthContext: Failed to parse backend error body, raw text:', errorText);
+                    console.error('AuthContext: JSON parse error:', e); // Log the original JSON parse error
+                }
+                await signOut(auth);
+                console.log('AuthContext: Signed out from Firebase due to backend error.');
+                setUser(null);
             } else {
-                // Backend successfully verified the token
-                const backendUserData = await backendResponse.json(); // Backend might return more user info
+                const backendUserData = await backendResponse.json();
                 console.log('AuthContext: Backend verification successful.', backendUserData);
-                // Set the user state in the context
-                // Using the Firebase user object is often simplest initially,
-                // but you might merge with backendUserData later if it contains roles etc.
-                setUser(firebaseUser); 
+                setUser(firebaseUser); // Set the authenticated Firebase user
+                console.log('AuthContext: User state set:', !!firebaseUser);
             }
-        } catch (error) {
-           // Handle network errors or errors during backend fetch/processing
-           console.error('AuthContext: Error during backend verification:', error);
-            // Sign out if backend communication fails to avoid false logged-in state
-           await signOut(auth); 
-           setUser(null); // Ensure context state is null
-           // TODO: Handle/expose this error
+        } catch (error: any) {
+           console.error('AuthContext: Error during backend verification fetch:', error);
+           await signOut(auth);
+           setUser(null);
+           console.log('AuthContext: Signed out from Firebase due to fetch error.');
         } finally {
-            // Stop loading once the initial check is complete (success or failure)
-           setLoading(false); 
+           setLoading(false);
+           console.log('AuthContext: setLoading(false). Final loading state:', false);
         }
 
       } else {
-        // Firebase reports no user is logged in (either initially or after logout)
         console.log('AuthContext: No Firebase user detected.');
         setUser(null);
-        setLoading(false); // Stop loading
+        setLoading(false);
+        console.log('AuthContext: User state set to null, setLoading(false).');
       }
+      console.log('AuthContext: onAuthStateChanged callback finished.');
     });
 
-    // Cleanup subscription on component unmount
-    return () => unsubscribe();
-     // The effect should only run once on mount and cleanup on unmount.
-     // auth is stable. No other dependencies needed.
-  }, []); 
-
-  // Function to handle the complete login flow (triggered by UI, e.g., button click)
+    return () => {
+      console.log('AuthContext: useEffect cleanup - Unsubscribing from onAuthStateChanged.');
+      unsubscribe();
+    }
+  }, []);
   const login = async () => {
-     // Start loading state only for the explicit login *process*,
-     // not the initial load check. Or manage loading states separately.
-     // Let's use the same loading state for simplicity now.
-     setLoading(true); 
-     try {
-        console.log('AuthContext: Initiating Google Sign-In popup...');
-        // 1. Trigger Firebase Google Sign-In popup
-        const result = await signInWithPopup(auth, googleProvider);
-        const firebaseUser = result.user;
-        console.log('AuthContext: Firebase Google Sign-In successful:', firebaseUser.uid);
+    console.log("AuthContext: login function called.");
+    setLoading(true);
+    console.log("AuthContext: login function - setLoading(true).");
+    try {
+      // Note: signInWithPopup is currently handled in LoginPage.tsx
+      // The onAuthStateChanged listener above will pick up the successful sign-in.
+      console.warn(
+        "AuthContext: login() function is currently relying on onAuthStateChanged listener to update state after signInWithPopup in LoginPage."
+      );
+      // If you move signInWithPopup here, you would need to replicate the backend fetch logic.
 
-        // 2. Get ID token from the newly signed-in user
-        const idToken = await firebaseUser.getIdToken();
-        console.log('AuthContext: Sending new ID token to backend for login...');
-
-        // 3. Call backend login endpoint to verify token and sync user
-        const backendResponse = await fetch(`${import.meta.env.VITE_BACKEND_API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                 // No Authorization header here, token is in the body as per backend spec for this endpoint
-            },
-            body: JSON.stringify({ idToken }),
-        });
-
-        if (!backendResponse.ok) {
-             console.error('AuthContext: Backend login failed during explicit login:', backendResponse.status);
-             const errorBody = await backendResponse.json();
-             console.error('AuthContext: Backend error details:', errorBody);
-             // If backend rejects, sign out from Firebase client too for consistency
-             await signOut(auth); 
-             setUser(null); // Ensure context state is null
-             // TODO: Expose a user-facing error message
-             throw new Error(errorBody.error || 'Backend login failed'); // Throw error to calling component
-        } else {
-            const backendUserData = await backendResponse.json();
-            console.log('AuthContext: Explicit login verified by backend.', backendUserData);
-            // Set the user state in the context
-            setUser(firebaseUser); 
-            // TODO: Maybe use backendUserData if it has critical info
-        }
-
-     } catch (error: any) { // Catch errors from popup, token get, or backend fetch/logic
-       console.error('AuthContext: Login process failed:', error);
-       setUser(null); // Ensure user is null on any error
-       // TODO: Handle error display in UI layer using state/context or return value
-       throw error; // Re-throw so calling component can handle it (e.g., show error message)
-     } finally {
-        // Stop loading regardless of success or failure
-        setLoading(false); 
-     }
+      // Simulate loading for the explicit login action, even if sign-in happens elsewhere
+      // In a refactored version, signInWithPopup and the *initial* backend fetch would live here.
+    } catch (error: any) {
+      console.error("AuthContext: Login function error:", error);
+      // Error handling for the popup itself (e.g., user closes popup)
+      // If popup fails, onAuthStateChanged won't fire with a user, so the state remains null/loading becomes false eventually.
+      // No need to signOut here if popup failed, as no session was established.
+      // You might want to set an error message state here.
+    } finally {
+      // setLoading(false); // Let the onAuthStateChanged finally block handle this
+      // If signInWithPopup was here, the finally block would be more important for loading state.
+      console.log(
+        "AuthContext: login function finally block (did not set loading here)."
+      );
+    }
+    // The onAuthStateChanged listener will eventually fire and handle the state update
+    // and set loading to false.
   };
 
-  // Function to handle the logout process
   const logout = async () => {
+    console.log("AuthContext: logout function called.");
     setLoading(true); // Optional: Show loading during logout
     try {
-       console.log('AuthContext: Initiating Firebase sign out...');
-       // 1. Sign out from Firebase client
-       await signOut(auth); 
-       // No backend API call needed for logout based on initial backend spec
-       setUser(null); // Clear user state in context
-       console.log('AuthContext: User logged out successfully.');
-       // TODO: Redirect user after logout (handled by UI components using useAuth)
+      console.log("AuthContext: Initiating Firebase sign out...");
+      await signOut(auth);
+      console.log("AuthContext: Firebase signOut complete.");
+      // onAuthStateChanged will fire with null user and update context state
+      // setUser(null); // No need, listener handles it
     } catch (error) {
-       console.error('AuthContext: Logout process failed:', error);
-       // TODO: Handle error display
+      console.error("AuthContext: Logout process failed:", error);
+      // TODO: Handle error display
     } finally {
-       setLoading(false); // Stop loading
+      // setLoading(false); // No need, onAuthStateChanged handles it
+      console.log(
+        "AuthContext: logout function finally block (did not set loading here)."
+      );
     }
   };
+  
 
-  // The value provided by the context to consuming components
   const value: AuthContextType = { user, loading, login, logout };
 
-  // Provide the context value to the children components tree
+  console.log('AuthContext: Providing value - user:', !!user, 'loading:', loading);
+
   return (
     <AuthContext.Provider value={value}>
       {children}
