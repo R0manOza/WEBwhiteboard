@@ -77,7 +77,7 @@ It uses `useState` to manage the `user` and `loading` state internally within th
 -   Fire immediately when the listener is attached, reporting the current authentication state (whether a user is already logged in, perhaps from a previous session persisted by Firebase).
 -   Fire again any time the authentication state changes (e.g., after `signInWithPopup` completes successfully, or after `signOut` completes).
 
-### Inside the onAuthStateChanged callback (`async (firebaseUser) => { ... }`):
+## Inside the onAuthStateChanged callback (`async (firebaseUser) => { ... }`):
 
 -   `if (firebaseUser)`: If Firebase reports that a user is logged in (`firebaseUser` is not null):
     -   It logs the user detected.
@@ -94,7 +94,7 @@ It uses `useState` to manage the `user` and `loading` state internally within th
 
 `return () => unsubscribe();`: This is the cleanup function for the `useEffect`. It's called when the `AuthProvider` component unmounts, and it stops the `onAuthStateChanged` listener to prevent memory leaks.
 
-### login Function
+## login Function
 
 `const login = async () => { ... }`: This function is intended to be called by UI components (like a Login button) to start the login process.
 
@@ -106,7 +106,7 @@ It has a `try...catch...finally` block.
 
 It sets `loading` to `false` in `finally`.
 
-### logout Function
+## logout Function
 
 `const logout = async () => { ... }`: This function is intended to be called by UI components (like a Sign Out button) to log the user out.
 
@@ -123,14 +123,57 @@ It logs success or error.
 It sets `loading` to `false` in `finally`.
 
 
-### Summery
+## Summery
  So in summery The AuthContext is a powerful pattern for centrally managing your application's authentication state. The AuthProvider component acts as a gatekeeper, using Firebase's onAuthStateChanged listener to stay updated on the user's login status.
 
 
 
-### New Problems
+## New Problems
 Well we hit another wall, even though I tested AuthContext (basic stuf with mocikng logins to test if it was actualy working) when I tried to test it on our website I got surprise visit from someone Roma has been fighting for a long time. Maybe not today meybe not tomorrow but eventually I hope we will beat it.
 ![MainEnemy](MainEnemy.png)
 
 ### new problem fixed? kinda but not really 
 ROMA: this cross problem has been after me this whole project it ruined my productivity , and yet i couldn't fix it . even tho now frontend finnaly is able to get the token and send it to backend that error still pops up , 80% of the time it's not a problem , but sometimes it causes front not to send the token to the back , anyhow , for now this should work 
+
+
+
+
+
+## Completion of Frontend Phase 2 & Initiation of Phase 3 (Containers)
+Today's development efforts focused on finalizing the frontend tasks outlined for Phase 2, specifically related to board access and settings UI, and subsequently commencing work on Phase 3, which introduces the container system.
+
+## Phase 2 Completion: Board Access and Settings UI
+The primary objective was to implement the necessary user interfaces and conditional rendering logic within the BoardViewPage to handle board settings and access control for private boards. Key accomplishments include:
+
+### Board Settings Modal (BoardSettingsModal.tsx): 
+A dedicated component was developed to display and facilitate the editing of board properties such as name, description, and visibility. This modal includes form elements to capture user input and is structured to integrate with a backend API endpoint for saving changes (implementation of the save logic depends on backend readiness, currently mocked for testing).
+
+### Private Board Join Form (JoinPrivateBoardForm.tsx):
+ A component was created to handle the process of joining a private board. It provides a password input field and a submission mechanism designed to send the password to the backend for verification (logic depends on backend readiness, currently mocked for testing).
+ 
+### BoardViewPage Access Logic and Integration: 
+The core BoardViewPage.tsx component was updated to dynamically determine the user's access level to a specific board based on fetched board data (visibility and membership). It now conditionally renders either the main board canvas (if access is granted) or the JoinPrivateBoardForm (if the board is private and access is denied). A mechanism was included to transition to the board view upon successful joining via the form. The BoardSettingsModal was integrated, controlled by local state, and rendered when triggered.
+
+This completes the defined frontend tasks for Phase 2, establishing the UI framework for managing board access and properties.
+
+
+## Phase 3 Initiation: Container System Foundation
+Following the completion of Phase 2 frontend tasks, work began on Phase 3, focusing on the foundational elements of the container system on the frontend:
+
+### Basic Container Component (Container.tsx):
+ A foundational React component was created to represent a single container on the board. This initial version focuses on rendering the container's title and establishing a basic visual placeholder, ready to be enhanced with interactivity (dragging, resizing) in subsequent steps.
+
+### Container Fetching and Rendering: 
+The BoardViewPage.tsx component was extended to fetch the list of containers associated with the current board from a designated backend endpoint (/api/boards/:boardId/containers) as part of its initial data loading process (this fetch is conditional on the user having access to the board). The fetched container data is stored in component state, and the Container components are rendered within the board canvas area by mapping over this state.
+
+### Create Container Form (CreateContainerForm.tsx): 
+A basic form component was created to allow users to input details (title, purpose) for a new container. This component is integrated into the BoardViewPage and is designed to call a backend API endpoint (/api/boards/:boardId/containers) to create the container (logic depends on backend readiness, currently mocked for testing).
+
+### Real-time Container Event Listeners:
+ Crucially, WebSocket listeners were implemented within the BoardViewPage's socket effect. These listeners are configured to listen for containerAdded, containerUpdated, and containerDeleted events broadcast by the backend. Corresponding handler functions were implemented to update the component's containers state immutably in real-time based on the data received from these events, ensuring the UI reflects changes made by other users or the backend.
+
+## Current Status:
+The frontend is now capable of managing board access and settings UI flows, fetching and displaying a static representation of containers, and is equipped with real-time listeners ready to synchronize container changes pushed from the backend WebSocket server.
+
+## Next Steps:
+The immediate next steps for Phase 3 involve adding interactivity to the Container component by implementing drag-and-drop and resizing capabilities, along with the necessary logic to communicate these changes back to the backend via API calls and ensure smooth real-time updates across clients.

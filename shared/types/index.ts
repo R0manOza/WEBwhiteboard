@@ -13,6 +13,9 @@ export interface Board {
   createdAt: number;
   updatedAt: number;
 }
+
+export type ContainerPurpose = "links" | "notes";
+
 /**
  * Represents a container within a board that holds either links or notes
  * @interface Container

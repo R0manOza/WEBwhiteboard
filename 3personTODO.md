@@ -426,7 +426,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 4**: Create board settings and private board join UI
+- [x] **Day 4**: Create board settings and private board join UI
 
 **Tests to Write:**
 - [ ] Dashboard displays user's boards correctly
@@ -513,7 +513,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Draggable, resizable container interface
 
 **Tasks:**
-- [ ] **Day 1**: Create basic container component
+- [x] **Day 1**: Create basic container component
   ```typescript
   // src/components/Board/Container.tsx
   export const Container = ({ container, onUpdate }) => {
@@ -548,7 +548,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 
 - [ ] **Day 2**: Implement drag-and-drop with react-draggable
 - [ ] **Day 3**: Implement resizing with react-resizable-box
-- [ ] **Day 4**: Create container creation UI (floating menu or sidebar)
+- [x] **Day 4**: Create container creation UI (floating menu or sidebar)
 
 **Required Libraries:**
 ```bash
