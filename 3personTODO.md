@@ -360,7 +360,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Board dashboard and real-time UI foundation
 
 **Tasks:**
-- [ ] **Day 1**: Create board dashboard component
+- [x] **Day 1**: Create board dashboard component
   ```typescript
   // src/components/Dashboard.tsx
   export const Dashboard = () => {
@@ -379,7 +379,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 2**: Create board view component with canvas
+- [x] **Day 2**: Create board view component with canvas
   ```typescript
   // src/components/Board/BoardCanvas.tsx
   export const BoardCanvas = ({ boardId }) => {
@@ -403,7 +403,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 3**: Implement WebSocket client hook
+- [x] **Day 3**: Implement WebSocket client hook
   ```typescript
   // src/hooks/useSocket.ts
   export const useSocket = (boardId: string) => {
