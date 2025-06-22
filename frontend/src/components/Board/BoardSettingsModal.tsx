@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext'; // Assuming you need token for fetch
+import { useAuth } from '../../contexts/AuthContext'; 
 import type { Board } from '../../../../shared/types' 
 
 // Define props for the modal

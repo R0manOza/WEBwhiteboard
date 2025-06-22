@@ -360,7 +360,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Board dashboard and real-time UI foundation
 
 **Tasks:**
-- [ ] **Day 1**: Create board dashboard component
+- [x] **Day 1**: Create board dashboard component
   ```typescript
   // src/components/Dashboard.tsx
   export const Dashboard = () => {
@@ -379,7 +379,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 2**: Create board view component with canvas
+- [x] **Day 2**: Create board view component with canvas
   ```typescript
   // src/components/Board/BoardCanvas.tsx
   export const BoardCanvas = ({ boardId }) => {
@@ -403,7 +403,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 3**: Implement WebSocket client hook
+- [x] **Day 3**: Implement WebSocket client hook
   ```typescript
   // src/hooks/useSocket.ts
   export const useSocket = (boardId: string) => {
@@ -426,7 +426,7 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 4**: Create board settings and private board join UI
+- [x] **Day 4**: Create board settings and private board join UI
 
 **Tests to Write:**
 - [ ] Dashboard displays user's boards correctly
@@ -513,7 +513,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 **Primary Focus**: Draggable, resizable container interface
 
 **Tasks:**
-- [ ] **Day 1**: Create basic container component
+- [x] **Day 1**: Create basic container component
   ```typescript
   // src/components/Board/Container.tsx
   export const Container = ({ container, onUpdate }) => {
@@ -548,7 +548,7 @@ Build a multi-user, real-time collaborative web application where users can orga
 
 - [ ] **Day 2**: Implement drag-and-drop with react-draggable
 - [ ] **Day 3**: Implement resizing with react-resizable-box
-- [ ] **Day 4**: Create container creation UI (floating menu or sidebar)
+- [x] **Day 4**: Create container creation UI (floating menu or sidebar)
 
 **Required Libraries:**
 ```bash

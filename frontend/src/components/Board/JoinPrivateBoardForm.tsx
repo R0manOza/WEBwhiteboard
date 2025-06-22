@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext'; // Assuming you need token for fetch
+import { useAuth } from '../../contexts/AuthContext';
 
 interface JoinPrivateBoardFormProps {
   boardId: string;
