@@ -1,11 +1,49 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors'; // Import cors middleware
+import http from 'http';
+import { Server } from 'socket.io';
 import admin from './config/firebaseAdmin';
-
 import authRoutes from './routes/authRoutes';
+import { initializeSocket } from './socket/socketHandler';
 
 const app: Express = express();
 const port = process.env.PORT || 3001; // Backend port
+
+// Set up the HTTP server and Socket.IO
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173', // Change this if frontend runs elsewhere
+    methods: ['GET', 'POST']
+  }
+});
+
+// Initialize all the socket stuff (see socketHandler.ts)
+initializeSocket(io);
+
+// CORS config for API routes (make sure this matches your frontend)
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+
+// Parse JSON bodies (pretty standard)
+app.use(express.json());
+
+// Health check endpoint (handy for debugging)
+app.get('/api/health', (req: Request, res: Response) => {
+  res.send('Backend is healthy and running!');
+});
+
+// Auth routes (login, etc.)
+app.use('/api/auth', authRoutes);
+
+// Start the server (only need this once!)
+server.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
 
 //usefull features of express
 //app.get('/users', getAllUsers);
@@ -14,39 +52,3 @@ const port = process.env.PORT || 3001; // Backend port
 // app.delete('/users/:id', deleteUser);
 //app.use(express.json()); // Parse JSON bodies
 // app.use('/api', authMiddleware); // Require auth for /api routes
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Replace with your frontend's actual origin(s) in production
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
-};
-app.use(cors(corsOptions));
-// --- End CORS Middleware ---
-
-
-app.use(express.json()); // Parse JSON bodies
-
-// Remove or comment out this potentially redundant endpoint
-// app.post('/api/verifyToken', async (req, res) => {
-//   const idToken = req.body.token;
-//   try {
-//     const decodedToken = await admin.auth().verifyIdToken(idToken);
-//
-//     res.json({ uid: decodedToken.uid });
-//   } catch (error) {
-//     res.status(401).send('Unauthorized');
-//
-//   }
-// });
-
-app.get('/api/health', (req: Request, res: Response) => {
-  res.send('Backend is healthy and running!');
-});
-
-
-// Use the auth routes
-app.use('/api/auth', authRoutes);
-
-
-app.listen(port, () => {
-  console.log(`[server]: Backend server is running at http://localhost:${port}`);
-});
