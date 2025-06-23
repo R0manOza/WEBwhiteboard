@@ -57,6 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const idToken = await firebaseUser.getIdToken();
             console.log('AuthContext: Got ID token. Sending to backend...');
+            console.log("Your Firebase ID token:", idToken);
+            // This is a test to see if the user is authenticated
 
             // USE THE CORRECT PROXY URL HERE
             const backendResponse = await fetch(backendLoginUrl, { // <--- THIS LINE MUST USE backendLoginUrl

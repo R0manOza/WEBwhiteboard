@@ -150,4 +150,76 @@
   background: #1d4ed8 !important;
   transform: scale(1.05);
   transition: all 0.2s ease;
+}
+
+/* Drawing Canvas Styles */
+.drawing-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+/* Container Drawing Canvas */
+.container-drawing-canvas {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: crosshair;
+  background-color: white;
+  width: 100%;
+  height: 100%;
+}
+
+/* Mode Toggle Button */
+.mode-toggle-btn {
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Drawing Tools */
+.drawing-tools {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+/* Canvas Area when in drawing mode */
+.boardview-canvas-area.drawing-mode {
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Custom scrollbar for container content */
+.container-content {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+.container-content::-webkit-scrollbar {
+  width: 8px;
+  background: #f3f4f6;
+}
+.container-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+.container-content::-webkit-scrollbar-thumb:hover {
+  background: #b6bbc4;
 } 

@@ -7,6 +7,7 @@ import type { Board, Container as ContainerType } from '../../../shared/types';
 import BoardSettingsModal from '../components/Board/BoardSettingsModal';
 import Container from '../components/Board/Container';
 import CreateContainerForm from '../components/Board/CreateContainerForm';
+import DrawingCanvas from '../components/Board/DrawingCanvas';
 import './BoardViewPage.css';
 
 // Define a type for cursor data received from others
@@ -33,6 +34,9 @@ function BoardViewPage() {
   // Container state
   const [containers, setContainers] = useState<ContainerType[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Drawing mode state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -306,10 +310,20 @@ function BoardViewPage() {
       {/* Canvas Area */}
       <div 
         ref={canvasRef} 
-        className="boardview-canvas-area"
+        className={`boardview-canvas-area ${isDrawingMode ? 'drawing-mode' : ''}`}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
       >
+        {/* Drawing Canvas - shown when in drawing mode */}
+        {isDrawingMode && (
+          <DrawingCanvas
+            boardId={boardId || ''}
+            width={1200}
+            height={600}
+            className="drawing-canvas"
+          />
+        )}
+
         {/* Cursor indicators */}
         {Object.entries(otherCursors).map(([userId, position]) => (
           <div
@@ -329,8 +343,8 @@ function BoardViewPage() {
           />
         ))}
 
-        {/* Containers */}
-        {containers.map(container => (
+        {/* Containers - shown when not in drawing mode */}
+        {!isDrawingMode && containers.map(container => (
           <Container
             key={container.id}
             container={container}
@@ -355,32 +369,63 @@ function BoardViewPage() {
           </div>
         )}
 
-        {/* Add Container Button */}
+        {/* Mode Toggle Button */}
         <button
-          className="add-container-btn"
-          onClick={() => setShowCreateForm(true)}
+          className="mode-toggle-btn"
+          onClick={() => setIsDrawingMode(!isDrawingMode)}
           style={{
             position: 'absolute',
-            bottom: '20px',
+            top: '20px',
             right: '20px',
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            backgroundColor: '#2563eb',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            backgroundColor: isDrawingMode ? '#10b981' : '#2563eb',
             color: 'white',
             border: 'none',
-            fontSize: '24px',
+            fontSize: '14px',
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             zIndex: 100,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            gap: '6px',
           }}
-          title="Add Container"
+          title={isDrawingMode ? "Switch to Container Mode" : "Switch to Drawing Mode"}
         >
-          +
+          <span role="img" aria-label={isDrawingMode ? "container" : "drawing"}>
+            {isDrawingMode ? "📦" : "✏️"}
+          </span>
+          {isDrawingMode ? "Containers" : "Draw"}
         </button>
+
+        {/* Add Container Button - only shown in container mode */}
+        {!isDrawingMode && (
+          <button
+            className="add-container-btn"
+            onClick={() => setShowCreateForm(true)}
+            style={{
+              position: 'absolute',
+              bottom: '20px',
+              right: '20px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title="Add Container"
+          >
+            +
+          </button>
+        )}
       </div>
     </div>
   );

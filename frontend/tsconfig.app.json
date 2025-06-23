@@ -22,7 +22,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+    //removed erasableSyntaxOnly because it was causing issues with the firebase admin sdk
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },

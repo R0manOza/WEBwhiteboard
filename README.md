@@ -13,8 +13,17 @@ Build a multi-user, real-time collaborative web application where users can orga
 - **Google OAuth Authentication** via Firebase Auth
 - **Real-time collaboration** with live cursor tracking and instant content sync
 - **Two Container Types**: Links containers (for URL bookmarks) and Notes containers (for text notes)
+- **Drawing Capabilities**: Full-board drawing and container-specific drawing
 - **Desktop-first UI** with clean, professional interface
 - **Scalable Architecture**: React frontend + Node.js backend + Firebase + AWS deployment
+
+### Drawing Features
+- **Full-Board Drawing**: Switch to drawing mode to draw directly on the board canvas
+- **Container Drawing**: Draw within notes containers for visual notes and sketches
+- **Real-time Drawing Sync**: See other users' drawings in real-time as they draw
+- **Drawing Tools**: Color picker, brush size slider, and clear canvas functionality
+- **Drawing Status Indicators**: Visual feedback when other users are drawing
+- **Dual Mode Containers**: Notes containers can switch between text and drawing modes
 
 ---
 

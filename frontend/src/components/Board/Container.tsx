@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Container as ContainerType } from '../../../../shared/types';
+import ContainerDrawing from './ContainerDrawing';
 
 interface ContainerProps {
   container: ContainerType;
@@ -31,6 +32,10 @@ const Container: React.FC<ContainerProps> = ({
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [titleInput, setTitleInput] = useState('');
+  
+  // Drawing state for notes containers
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [notesText, setNotesText] = useState('');
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -199,6 +204,29 @@ const Container: React.FC<ContainerProps> = ({
           </h3>
         </div>
         
+        {/* Notes container mode toggle */}
+        {container.purpose === 'notes' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDrawingMode(!isDrawingMode);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              color: isDrawingMode ? '#10b981' : '#6b7280',
+              fontSize: '12px',
+              marginRight: '8px',
+            }}
+            title={isDrawingMode ? "Switch to Text Mode" : "Switch to Drawing Mode"}
+          >
+            {isDrawingMode ? "📝" : "✏️"}
+          </button>
+        )}
+        
         {onDelete && (
           <button
             onClick={(e) => {
@@ -227,27 +255,43 @@ const Container: React.FC<ContainerProps> = ({
         style={{
           flex: 1,
           padding: '16px',
-          overflow: 'auto',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          maxHeight: '400px',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#d1d5db #f3f4f6',
           backgroundColor: 'transparent',
         }}
       >
         {container.purpose === 'notes' ? (
-          <textarea
-            placeholder="Write your notes here..."
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              backgroundColor: 'transparent',
-              resize: 'none',
-              fontSize: '14px',
-              lineHeight: '1.5',
-              color: '#374151',
-              fontFamily: 'inherit',
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
+          isDrawingMode ? (
+            <ContainerDrawing
+              boardId={container.boardId}
+              containerId={container.id}
+              width={container.size.width - 32}
+              height={container.size.height - 80}
+              className="container-drawing-canvas"
+            />
+          ) : (
+            <textarea
+              placeholder="Write your notes here..."
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                resize: 'none',
+                fontSize: '14px',
+                lineHeight: '1.5',
+                color: '#374151',
+                fontFamily: 'inherit',
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          )
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
             {/* Add Link Form */}

@@ -59,3 +59,39 @@ export interface NoteItem {
   createdAt: number;
   updatedAt?: number;
 }
+
+/**
+ * Represents a drawing stroke point
+ * @interface DrawingPoint
+ */
+export interface DrawingPoint {
+  x: number;
+  y: number;
+  pressure?: number;
+  timestamp: number;
+}
+
+/**
+ * Represents a complete drawing stroke
+ * @interface DrawingStroke
+ */
+export interface DrawingStroke {
+  id: string;
+  boardId: string;
+  userId: string;
+  points: DrawingPoint[];
+  color: string;
+  brushSize: number;
+  opacity: number;
+  createdAt: number;
+}
+
+/**
+ * Represents drawing data for a board
+ * @interface BoardDrawing
+ */
+export interface BoardDrawing {
+  boardId: string;
+  strokes: DrawingStroke[];
+  lastUpdated: number;
+}
