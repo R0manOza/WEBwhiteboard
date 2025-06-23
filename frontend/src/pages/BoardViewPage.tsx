@@ -41,6 +41,9 @@ function BoardViewPage() {
   // --- New State for Phase 3: Containers ---
   const [containers, setContainers] = useState<ContainerType[]>([]);
 
+  // --- New State for Phase 3: User Drawing Indicator ---
+  const [usersDrawing, setUsersDrawing] = useState<{ [userId: string]: boolean }>({});
+
 
   // --- Existing Throttled Cursor Position Sender ---
   const sendCursorPosition = useCallback(
@@ -260,6 +263,7 @@ function BoardViewPage() {
                  console.warn(`BoardViewPage (${boardId}): Received invalid containerUpdated data:`, data);
              }
         };
+        
 
         const handleContainerDeleted = (data: { boardId: string; containerId: string }) => {
              // Check added: ensure data is valid and for the correct board
@@ -307,6 +311,17 @@ function BoardViewPage() {
        // use the functional update form (prev => ...) which gets the latest state.
   }, [socket, user, boardId, hasAccess]);
 
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUserDrawingStatus = ({ userId, isDrawing }) => {
+      setUsersDrawing(prev => ({ ...prev, [userId]: isDrawing }));
+    };
+    socket.on('userDrawingStatus', handleUserDrawingStatus);
+    return () => {
+      socket.off('userDrawingStatus', handleUserDrawingStatus);
+    };
+  }, [socket]);
 
    // --- Render Logic ---
 
@@ -366,6 +381,19 @@ function BoardViewPage() {
    // Render the main board content
     console.log(`BoardViewPage (${boardId}): Rendering main board content.`);
 
+  // Emit drawing status events
+  const handleMouseDown = () => {
+    if (socket && isConnected && boardId && user && hasAccess) {
+      socket.emit('drawingStatus', { boardId, isDrawing: true });
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (socket && isConnected && boardId && user && hasAccess) {
+      socket.emit('drawingStatus', { boardId, isDrawing: false });
+    }
+  };
+
   return (
     <div className="page board-view-page">
       <h1>Board: {board?.name || boardId}</h1>
@@ -392,6 +420,8 @@ function BoardViewPage() {
             backgroundColor: '#f9f9f9',
             touchAction: 'none', // Prevent browser touch gestures interfering with drag/pan
         }}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
       >
         {/* Optional message if no containers */}
         {containers.length === 0 && (
@@ -442,6 +472,23 @@ function BoardViewPage() {
                     transition: 'left 0.05s linear, top 0.05s linear', // Smooth movement
                  }}
              >
+                {/* Drawing indicator */}
+                {usersDrawing[userId] && (
+                  <span style={{
+                    position: 'absolute',
+                    left: 12,
+                    top: -8,
+                    background: 'yellow',
+                    color: 'black',
+                    padding: '2px 6px',
+                    borderRadius: '6px',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    zIndex: 2001,
+                  }}>
+                    ✏️ Drawing…
+                  </span>
+                )}
                 {/* Optional: Add username tooltip */}
                  <span style={{
                     position: 'absolute',
