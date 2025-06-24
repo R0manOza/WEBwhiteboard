@@ -1,0 +1,136 @@
+/* DashboardPage.css */
+.page.dashboard-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.create-board-btn {
+  background: #4f8cff;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.create-board-btn:hover {
+  background: #2563eb;
+}
+
+.board-list-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.board-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 1.2rem 1rem 1rem 1rem;
+  min-width: 240px;
+  max-width: 320px;
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: box-shadow 0.2s;
+}
+.board-card:hover {
+  box-shadow: 0 4px 20px rgba(79,140,255,0.15);
+}
+
+.board-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.board-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #222;
+}
+.board-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.edit-btn, .delete-btn, .open-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.edit-btn {
+  background: #f1f5ff;
+  color: #2563eb;
+}
+.edit-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+.delete-btn {
+  background: #fff0f0;
+  color: #e11d48;
+}
+.delete-btn:hover {
+  background: #e11d48;
+  color: #fff;
+}
+.open-btn {
+  background: #4f8cff;
+  color: #fff;
+  margin-top: 1rem;
+}
+.open-btn:hover {
+  background: #2563eb;
+}
+.board-card-body {
+  margin-top: 0.7rem;
+  margin-bottom: 0.5rem;
+}
+.board-description {
+  color: #555;
+  font-size: 0.98rem;
+  margin-bottom: 0.3rem;
+}
+.board-visibility {
+  color: #888;
+  font-size: 0.92rem;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-form {
+  background: #fff;
+  padding: 2rem 1.5rem;
+  border-radius: 10px;
+  min-width: 320px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.13);
+}
+
+@media (max-width: 600px) {
+  .board-list-cards {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .board-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .modal-form {
+    min-width: 90vw;
+  }
+} 
