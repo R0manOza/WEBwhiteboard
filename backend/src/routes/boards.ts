@@ -41,7 +41,7 @@ router.post('/', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: R
   }
 });
 
-// GET /api/boards - List boards for the current user
+// GET /api/boards - List all public boards and private boards the user is a member of
 router.get('/', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const user = req.user;
@@ -50,12 +50,19 @@ router.get('/', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Re
       return;
     }
     const boardsRef = firestore.collection('boards');
-    // Firestore does not support querying map keys directly, so we fetch all boards and filter in code
     const snapshot = await boardsRef.get();
-    const boards = snapshot.docs
-      .map(doc => doc.data())
-      .filter(board => board.members && board.members[user.uid]);
-    res.json(boards);
+    const boards = snapshot.docs.map(doc => doc.data());
+    // Get all public boards
+    const publicBoards = boards.filter(board => board.visibility === 'public');
+    // Get all private boards the user is a member of
+    const privateBoards = boards.filter(board => board.visibility !== 'public' && board.members && board.members[user.uid]);
+    // Combine and remove duplicates (by board id)
+    const allBoardsMap = new Map();
+    [...publicBoards, ...privateBoards].forEach(board => {
+      allBoardsMap.set(board.id, board);
+    });
+    const allBoards = Array.from(allBoardsMap.values());
+    res.json(allBoards);
   } catch (err: any) {
     console.error('Error fetching boards:', err);
     res.status(500).json({ error: 'Failed to fetch boards' });

@@ -43,8 +43,7 @@ export const useSocket = (boardId: string): UseSocketResult => {
     const connectSocket = async () => {
       const token = await user.getIdToken();
       if (didCancel) return;
-      const newSocket = io('/', {
-        path: '/socket.io',
+      const newSocket = io('http://localhost:3001', {
         auth: { token },
       });
       socketRef.current = newSocket;
