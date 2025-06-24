@@ -343,6 +343,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   }, [width, height, getCanvasContext, redrawCanvas]);
 
   // Drawing tools
+  const handleUndo = useCallback(() => {
+    setDrawingState(prev => {
+      if (prev.strokes.length === 0) return prev;
+      const newStrokes = prev.strokes.slice(0, -1);
+      return { ...prev, strokes: newStrokes };
+    });
+    // Redraw will be triggered by state update effect
+  }, []);
+
   const DrawingTools = () => (
     <div style={{
       position: 'absolute',
@@ -374,6 +383,21 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       <span style={{ fontSize: '12px', color: '#666' }}>
         {drawingSettings.brushSize}px
       </span>
+      <button
+        onClick={handleUndo}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: '#f59e42',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '12px',
+          cursor: 'pointer'
+        }}
+        disabled={drawingState.strokes.length === 0}
+      >
+        Undo
+      </button>
       <button
         onClick={() => {
           setDrawingState(prev => ({ ...prev, strokes: [], otherUserStrokes: {} }));
@@ -415,6 +439,27 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       socket.off('clearBoardDrawing', handleClear);
     };
   }, [socket, isConnected, boardId, getCanvasContext]);
+
+  // Redraw canvas when strokes change (including undo)
+  useEffect(() => {
+    redrawCanvas();
+  }, [drawingState.strokes, drawingState.otherUserStrokes, drawingState.currentStroke, redrawCanvas]);
+
+  // Keyboard shortcut for Undo (Ctrl+Z or Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isUndo = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'z';
+      if (isUndo) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleUndo]);
 
   return (
     <div style={{ position: 'relative', width, height }}>
