@@ -2,6 +2,9 @@ import { Server, Socket } from 'socket.io';
 import admin from '../config/firebaseAdmin';
 
 export function initializeSocket(io: Server) {
+  // In-memory map: boardId -> { userId: displayName }
+  const onlineUsersByBoard: { [boardId: string]: { [userId: string]: string } } = {};
+
   // Authenticate socket connections using Firebase ID token
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -19,11 +22,36 @@ export function initializeSocket(io: Server) {
     const user = (socket as any).user;
     console.log(`User connected: ${user.uid}`);
 
+    // Track which board rooms this socket has joined
+    const joinedBoards = new Set<string>();
+
     // Join board room
-    socket.on('joinBoardRoom', ({ boardId }) => {
+    socket.on('joinBoardRoom', async ({ boardId }) => {
       console.log(`User ${user.uid} joined board: ${boardId}`);
       socket.join(`board:${boardId}`);
-      socket.to(`board:${boardId}`).emit('userJoined', { userId: user.uid });
+      joinedBoards.add(boardId);
+
+      // Fetch displayName from Firestore
+      let displayName = user.name || user.displayName || '';
+      try {
+        const userDoc = await admin.firestore().collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData && userData.displayName) displayName = userData.displayName;
+        }
+      } catch (e) {
+        console.warn('Could not fetch user displayName from Firestore:', e);
+      }
+
+      // Add to online users map
+      if (!onlineUsersByBoard[boardId]) onlineUsersByBoard[boardId] = {};
+      onlineUsersByBoard[boardId][user.uid] = displayName;
+
+      // Broadcast updated online users list
+      io.to(`board:${boardId}`).emit('onlineUsers', {
+        boardId,
+        users: Object.entries(onlineUsersByBoard[boardId]).map(([uid, name]) => ({ userId: uid, displayName: name }))
+      });
     });
 
     // Handle cursor position events
@@ -115,11 +143,25 @@ export function initializeSocket(io: Server) {
       });
     });
 
+    // Handle clear board drawing event
+    socket.on('clearBoardDrawing', ({ boardId }) => {
+      io.to(`board:${boardId}`).emit('clearBoardDrawing', { boardId });
+    });
+
     // Add more event handlers as needed
 
+    // Handle disconnect
     socket.on('disconnect', () => {
-      // Optionally broadcast user left
-      // socket.to(...).emit('userLeft', { userId: user.uid });
+      for (const boardId of joinedBoards) {
+        if (onlineUsersByBoard[boardId]) {
+          delete onlineUsersByBoard[boardId][user.uid];
+          // Broadcast updated list
+          io.to(`board:${boardId}`).emit('onlineUsers', {
+            boardId,
+            users: Object.entries(onlineUsersByBoard[boardId]).map(([uid, name]) => ({ userId: uid, displayName: name }))
+          });
+        }
+      }
       console.log(`User disconnected: ${user.uid}`);
     });
   });

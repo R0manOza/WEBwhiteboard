@@ -381,6 +381,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           if (context) {
             context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
           }
+          // Emit clear event to all users
+          socket?.emit('clearBoardDrawing', { boardId });
         }}
         style={{
           padding: '4px 8px',
@@ -396,6 +398,23 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       </button>
     </div>
   );
+
+  // Listen for clearBoardDrawing event from socket
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+    const handleClear = (data: { boardId: string }) => {
+      if (data.boardId !== boardId) return;
+      setDrawingState(prev => ({ ...prev, strokes: [], otherUserStrokes: {}, currentStroke: null }));
+      const context = getCanvasContext();
+      if (context) {
+        context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
+      }
+    };
+    socket.on('clearBoardDrawing', handleClear);
+    return () => {
+      socket.off('clearBoardDrawing', handleClear);
+    };
+  }, [socket, isConnected, boardId, getCanvasContext]);
 
   return (
     <div style={{ position: 'relative', width, height }}>

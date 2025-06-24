@@ -40,6 +40,10 @@ function BoardViewPage() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  const [onlineUsers, setOnlineUsers] = useState<{ userId: string; displayName: string }[]>([]);
+  const [drawingUsers, setDrawingUsers] = useState<{ [userId: string]: boolean }>({});
+  const [ownerName, setOwnerName] = useState<string>('');
+
   // Throttled Cursor Position Sender
   const sendCursorPosition = useCallback(
     throttle((x: number, y: number) => {
@@ -156,7 +160,11 @@ function BoardViewPage() {
   useEffect(() => {
     const canvasElement = canvasRef.current;
     const handleMouseMove = (event: MouseEvent) => {
-      sendCursorPosition(event.clientX, event.clientY);
+      if (!canvasElement) return;
+      const rect = canvasElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      sendCursorPosition(x, y);
     };
 
     if (canvasElement && hasAccess) {
@@ -234,6 +242,47 @@ function BoardViewPage() {
     }
   };
 
+  // Fetch owner display name when board loads
+  useEffect(() => {
+    const fetchOwnerName = async () => {
+      if (!board?.ownerId || !user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/auth/userInfo?uid=${board.ownerId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOwnerName(data.displayName || board.ownerId);
+        } else {
+          setOwnerName(board.ownerId);
+        }
+      } catch {
+        setOwnerName(board.ownerId);
+      }
+    };
+    if (board && user) fetchOwnerName();
+  }, [board, user]);
+
+  // Listen for onlineUsers and userDrawingStatus events
+  useEffect(() => {
+    if (!socket || !hasAccess || !boardId || !user) return;
+    const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
+      if (data.boardId === boardId) setOnlineUsers(data.users);
+    };
+    const handleUserDrawingStatus = (data: { boardId: string; userId: string; isDrawing: boolean }) => {
+      if (data.boardId === boardId && data.userId !== user.uid) {
+        setDrawingUsers(prev => ({ ...prev, [data.userId]: data.isDrawing }));
+      }
+    };
+    socket.on('onlineUsers', handleOnlineUsers);
+    socket.on('userDrawingStatus', handleUserDrawingStatus);
+    return () => {
+      socket.off('onlineUsers', handleOnlineUsers);
+      socket.off('userDrawingStatus', handleUserDrawingStatus);
+    };
+  }, [socket, hasAccess, boardId, user]);
+
   // Loading state
   if (authLoading || boardLoading) {
     return (
@@ -286,6 +335,21 @@ function BoardViewPage() {
           {board?.description && (
             <p className="boardview-description">{board.description}</p>
           )}
+          <div style={{ marginTop: 8, fontSize: 14, color: '#555' }}>
+            <b>Owner:</b> {ownerName || board?.ownerId}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 13, color: '#2563eb' }}>
+            <b>Online:</b> {onlineUsers.length} {onlineUsers.length === 1 ? 'user' : 'users'}
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', gap: 8 }}>
+              {onlineUsers.map(u => (
+                <li key={u.userId} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>{u.displayName}</span>
+                  {drawingUsers[u.userId] && <span style={{ color: '#10b981', fontSize: 16 }}>✏️</span>}
+                  {u.userId === board?.ownerId && <span style={{ color: '#f59e42', fontSize: 14 }} title="Owner">★</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
         <div className="boardview-header-actions">
           <button
@@ -325,23 +389,41 @@ function BoardViewPage() {
         )}
 
         {/* Cursor indicators */}
-        {Object.entries(otherCursors).map(([userId, position]) => (
-          <div
-            key={userId}
-            className="other-user-cursor"
-            style={{
-              position: 'absolute',
-              left: position.x,
-              top: position.y,
-              width: '20px',
-              height: '20px',
-              backgroundColor: '#ff6b6b',
-              borderRadius: '50%',
-              pointerEvents: 'none',
-              zIndex: 1000,
-            }}
-          />
-        ))}
+        {Object.entries(otherCursors).map(([userId, position]) => {
+          const userObj = onlineUsers.find(u => u.userId === userId);
+          return (
+            <div key={userId} style={{ position: 'absolute', left: position.x, top: position.y, zIndex: 1000, pointerEvents: 'none' }}>
+              <div style={{
+                position: 'absolute',
+                top: '-22px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(255,255,255,0.95)',
+                color: '#2563eb',
+                fontWeight: 600,
+                fontSize: 13,
+                padding: '2px 8px',
+                borderRadius: 6,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                border: '1px solid #e5e7eb',
+              }}>
+                {userObj?.displayName || userId}
+              </div>
+              <div
+                className="other-user-cursor"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  backgroundColor: '#ff6b6b',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          );
+        })}
 
         {/* Containers - shown when not in drawing mode */}
         {!isDrawingMode && containers.map(container => (
