@@ -40,6 +40,39 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     opacity: 1
   });
 
+  // Pan and zoom state
+  const [viewport, setViewport] = useState({
+    offsetX: 0, // pan x
+    offsetY: 0, // pan y
+    scale: 1    // zoom
+  });
+  const isPanningRef = useRef(false);
+  const lastPanPosRef = useRef({ x: 0, y: 0 });
+  const spacePressedRef = useRef(false);
+
+  // Add pan mode toggle for button
+  const [panMode, setPanMode] = useState(false);
+
+  // Pan mode effect (button toggles spacePressedRef)
+  useEffect(() => {
+    spacePressedRef.current = panMode;
+  }, [panMode]);
+
+  // Convert screen (canvas) coords to world coords
+  const screenToWorld = (x: number, y: number) => {
+    return {
+      x: (x - viewport.offsetX) / viewport.scale,
+      y: (y - viewport.offsetY) / viewport.scale
+    };
+  };
+  // Convert world coords to screen (canvas) coords
+  const worldToScreen = (x: number, y: number) => {
+    return {
+      x: x * viewport.scale + viewport.offsetX,
+      y: y * viewport.scale + viewport.offsetY
+    };
+  };
+
   // Generate unique stroke ID
   const generateStrokeId = () => `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -56,35 +89,23 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   // Clear canvas and redraw all strokes
   const redrawCanvas = useCallback(() => {
-    console.log('DrawingCanvas: Redrawing canvas');
     const context = getCanvasContext();
-    if (!context) {
-      console.log('DrawingCanvas: No context for redraw');
-      return;
-    }
-    
+    if (!context) return;
     const { canvas, ctx } = context;
-    
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log('DrawingCanvas: Canvas cleared, drawing strokes');
-    
-    // Draw all local strokes
+    ctx.save();
+    ctx.setTransform(viewport.scale, 0, 0, viewport.scale, viewport.offsetX, viewport.offsetY);
     drawingState.strokes.forEach(stroke => {
       drawStroke(ctx, stroke);
     });
-    
-    // Draw other users' strokes
     Object.values(drawingState.otherUserStrokes).flat().forEach(stroke => {
       drawStroke(ctx, stroke);
     });
-    
-    // Draw current stroke if drawing
     if (drawingState.currentStroke) {
-      console.log('DrawingCanvas: Drawing current stroke with', drawingState.currentStroke.points.length, 'points');
       drawStroke(ctx, drawingState.currentStroke);
     }
-  }, [drawingState, getCanvasContext]);
+    ctx.restore();
+  }, [drawingState, getCanvasContext, viewport]);
 
   // Draw a single stroke
   const drawStroke = useCallback((ctx: CanvasRenderingContext2D, stroke: DrawingStroke) => {
@@ -116,93 +137,45 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   // Handle mouse down - start drawing
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    console.log('DrawingCanvas: Mouse down event triggered', { x: e.clientX, y: e.clientY });
-    if (!user || !isConnected) {
-      console.log('DrawingCanvas: Skipping - no user or not connected', { user: !!user, isConnected });
-      return;
-    }
-    
+    if (!user || !isConnected) return;
     const context = getCanvasContext();
-    if (!context) {
-      console.log('DrawingCanvas: No canvas context available');
-      return;
-    }
-    
-    const { canvas, ctx } = context;
+    if (!context) return;
+    const { canvas } = context;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    console.log('DrawingCanvas: Starting new stroke', { x, y, color: drawingSettings.color, brushSize: drawingSettings.brushSize });
-    
+    const world = screenToWorld(x, y);
     const newStroke: DrawingStroke = {
       id: generateStrokeId(),
       boardId,
       userId: user.uid,
-      points: [{ x, y, timestamp: Date.now() }],
+      points: [{ x: world.x, y: world.y, timestamp: Date.now() }],
       color: drawingSettings.color,
       brushSize: drawingSettings.brushSize,
       opacity: drawingSettings.opacity,
       createdAt: Date.now()
     };
-    
-    setDrawingState(prev => ({
-      ...prev,
-      isDrawing: true,
-      currentStroke: newStroke
-    }));
-    
-    // Emit drawing status
+    setDrawingState(prev => ({ ...prev, isDrawing: true, currentStroke: newStroke }));
     socket?.emit('drawingStatus', { boardId, isDrawing: true });
-    
-    // Emit stroke start
-    socket?.emit('strokeStart', { 
-      boardId, 
-      strokeId: newStroke.id,
-      color: drawingSettings.color,
-      brushSize: drawingSettings.brushSize,
-      opacity: drawingSettings.opacity
-    });
-  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket]);
+    socket?.emit('strokeStart', { boardId, strokeId: newStroke.id, color: drawingSettings.color, brushSize: drawingSettings.brushSize, opacity: drawingSettings.opacity });
+  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket, screenToWorld]);
 
   // Handle mouse move - continue drawing
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawingState.isDrawing || !drawingState.currentStroke) {
-      return;
-    }
-    
-    console.log('DrawingCanvas: Mouse move event triggered', { x: e.clientX, y: e.clientY });
-    
+    if (!drawingState.isDrawing || !drawingState.currentStroke) return;
     const context = getCanvasContext();
     if (!context) return;
-    
     const { canvas } = context;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    const newPoint: DrawingPoint = { x, y, timestamp: Date.now() };
-    
-    const updatedStroke = {
-      ...drawingState.currentStroke,
-      points: [...drawingState.currentStroke.points, newPoint]
-    };
-    
-    setDrawingState(prev => ({
-      ...prev,
-      currentStroke: updatedStroke
-    }));
-    
-    // Emit point
-    socket?.emit('strokePoint', { 
-      boardId, 
-      strokeId: updatedStroke.id,
-      point: newPoint
-    });
-    
-    // Redraw canvas
+    const world = screenToWorld(x, y);
+    const newPoint: DrawingPoint = { x: world.x, y: world.y, timestamp: Date.now() };
+    const updatedStroke = { ...drawingState.currentStroke, points: [...drawingState.currentStroke.points, newPoint] };
+    setDrawingState(prev => ({ ...prev, currentStroke: updatedStroke }));
+    socket?.emit('strokePoint', { boardId, strokeId: updatedStroke.id, point: newPoint });
     redrawCanvas();
-  }, [drawingState.isDrawing, drawingState.currentStroke, getCanvasContext, boardId, socket, redrawCanvas]);
+  }, [drawingState.isDrawing, drawingState.currentStroke, getCanvasContext, boardId, socket, redrawCanvas, screenToWorld]);
 
   // Handle mouse up - finish drawing
   const handleMouseUp = useCallback(() => {
@@ -352,6 +325,20 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     // Redraw will be triggered by state update effect
   }, []);
 
+  // Zoom in/out handlers for buttons
+  const zoomBy = (factor: number) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const worldPos = screenToWorld(centerX, centerY);
+    let newScale = viewport.scale * factor;
+    newScale = Math.max(0.1, Math.min(10, newScale));
+    const newOffsetX = centerX - worldPos.x * newScale;
+    const newOffsetY = centerY - worldPos.y * newScale;
+    setViewport(v => ({ ...v, scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY }));
+  };
+
   const DrawingTools = () => (
     <div style={{
       position: 'absolute',
@@ -420,6 +407,55 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       >
         Clear
       </button>
+      {/* Pan/Zoom Buttons */}
+      <button
+        onClick={() => setPanMode(pm => !pm)}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: panMode ? '#2563eb' : '#e5e7eb',
+          color: panMode ? 'white' : '#222',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          fontWeight: 600
+        }}
+        title="Toggle Drag Mode (Pan)"
+      >
+        <span role="img" aria-label="drag">✋</span> Drag
+      </button>
+      <button
+        onClick={() => zoomBy(1.1)}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: '#e5e7eb',
+          color: '#222',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          fontWeight: 600
+        }}
+        title="Zoom In"
+      >
+        <span role="img" aria-label="zoom-in">➕</span>
+      </button>
+      <button
+        onClick={() => zoomBy(0.9)}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: '#e5e7eb',
+          color: '#222',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          fontWeight: 600
+        }}
+        title="Zoom Out"
+      >
+        <span role="img" aria-label="zoom-out">➖</span>
+      </button>
     </div>
   );
 
@@ -461,6 +497,66 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     };
   }, [handleUndo]);
 
+  // Pan/zoom handlers
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (!canvasRef.current) return;
+      e.preventDefault();
+      const { left, top } = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - left;
+      const mouseY = e.clientY - top;
+      const worldPos = screenToWorld(mouseX, mouseY);
+      let newScale = viewport.scale * (e.deltaY < 0 ? 1.1 : 0.9);
+      newScale = Math.max(0.1, Math.min(10, newScale));
+      // Keep mouse position stable
+      const newOffsetX = mouseX - worldPos.x * newScale;
+      const newOffsetY = mouseY - worldPos.y * newScale;
+      setViewport(v => ({ ...v, scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY }));
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') spacePressedRef.current = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') spacePressedRef.current = false;
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [viewport.scale, viewport.offsetX, viewport.offsetY]);
+
+  // Pan logic
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 1 || e.button === 2 || spacePressedRef.current) {
+      isPanningRef.current = true;
+      lastPanPosRef.current = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      return;
+    }
+    handleMouseDown(e);
+  };
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPanningRef.current) {
+      const dx = e.clientX - lastPanPosRef.current.x;
+      const dy = e.clientY - lastPanPosRef.current.y;
+      setViewport(v => ({ ...v, offsetX: v.offsetX + dx, offsetY: v.offsetY + dy }));
+      lastPanPosRef.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    handleMouseMove(e);
+  };
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      return;
+    }
+    handleMouseUp();
+  };
+
   return (
     <div style={{ position: 'relative', width, height }}>
       <DrawingTools />
@@ -470,13 +566,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         style={{
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
-          cursor: 'crosshair',
-          backgroundColor: 'white'
+          cursor: isPanningRef.current ? 'grab' : 'crosshair',
+          backgroundColor: 'white',
+          width: '100%',
+          height: '100%'
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleMouseLeave}
+        tabIndex={0}
       />
     </div>
   );
