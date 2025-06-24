@@ -41,6 +41,80 @@ export function initializeSocket(io: Server) {
       });
     });
 
+    // Handle drawing stroke events
+    socket.on('strokeStart', ({ boardId, strokeId, color, brushSize, opacity }) => {
+      console.log(`Stroke start from ${user.uid} on board ${boardId}: ${strokeId}`);
+      socket.to(`board:${boardId}`).emit('strokeStart', {
+        boardId,
+        strokeId,
+        userId: user.uid,
+        color,
+        brushSize,
+        opacity
+      });
+    });
+
+    socket.on('strokePoint', ({ boardId, strokeId, point }) => {
+      socket.to(`board:${boardId}`).emit('strokePoint', {
+        boardId,
+        strokeId,
+        userId: user.uid,
+        point
+      });
+    });
+
+    socket.on('strokeEnd', ({ boardId, strokeId }) => {
+      console.log(`Stroke end from ${user.uid} on board ${boardId}: ${strokeId}`);
+      socket.to(`board:${boardId}`).emit('strokeEnd', {
+        boardId,
+        strokeId,
+        userId: user.uid
+      });
+    });
+
+    // Handle container drawing events
+    socket.on('containerDrawingStatus', ({ boardId, containerId, isDrawing }) => {
+      socket.to(`board:${boardId}`).emit('containerUserDrawingStatus', {
+        boardId,
+        containerId,
+        userId: user.uid,
+        isDrawing,
+      });
+    });
+
+    socket.on('containerStrokeStart', ({ boardId, containerId, strokeId, color, brushSize, opacity }) => {
+      console.log(`Container stroke start from ${user.uid} on board ${boardId}, container ${containerId}: ${strokeId}`);
+      socket.to(`board:${boardId}`).emit('containerStrokeStart', {
+        boardId,
+        containerId,
+        strokeId,
+        userId: user.uid,
+        color,
+        brushSize,
+        opacity
+      });
+    });
+
+    socket.on('containerStrokePoint', ({ boardId, containerId, strokeId, point }) => {
+      socket.to(`board:${boardId}`).emit('containerStrokePoint', {
+        boardId,
+        containerId,
+        strokeId,
+        userId: user.uid,
+        point
+      });
+    });
+
+    socket.on('containerStrokeEnd', ({ boardId, containerId, strokeId }) => {
+      console.log(`Container stroke end from ${user.uid} on board ${boardId}, container ${containerId}: ${strokeId}`);
+      socket.to(`board:${boardId}`).emit('containerStrokeEnd', {
+        boardId,
+        containerId,
+        strokeId,
+        userId: user.uid
+      });
+    });
+
     // Add more event handlers as needed
 
     socket.on('disconnect', () => {

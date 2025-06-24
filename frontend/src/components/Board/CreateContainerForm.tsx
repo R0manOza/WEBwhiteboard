@@ -1,109 +1,153 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext'; // Assuming token needed
-import type { ContainerPurpose } from '../../../../shared/types'; // Assuming you'll add this type
-
-// You might want to add ContainerPurpose type to shared/types/index.ts
-// export type ContainerPurpose = "links" | "notes";
+import type { ContainerPurpose } from '../../../../shared/types';
 
 interface CreateContainerFormProps {
   boardId: string;
-  onCreateSuccess?: (container: any) => void; // Optional callback
+  onCreateSuccess?: (container: any) => void;
+  onCancel?: () => void;
 }
 
-const CreateContainerForm: React.FC<CreateContainerFormProps> = ({ boardId, onCreateSuccess }) => {
-  const { user } = useAuth();
+const CreateContainerForm: React.FC<CreateContainerFormProps> = ({ 
+  boardId, 
+  onCreateSuccess, 
+  onCancel 
+}) => {
   const [title, setTitle] = useState('');
-  const [purpose, setPurpose] = useState<ContainerPurpose>('notes'); // Default to notes
+  const [purpose, setPurpose] = useState<ContainerPurpose>('notes');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !boardId || loading) return;
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const token = await user.getIdToken();
-
-      // Define initial position and size (can be refined later)
-      const initialPosition = { x: 50, y: 50 }; // Example starting position
-      const initialSize = { width: 250, height: 150 }; // Example starting size
-
-      const response = await fetch(`/api/boards/${boardId}/containers`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      // For now, we'll create a container with default position and size
+      // Later we'll integrate with the backend
+      const newContainer = {
+        id: `temp-${Date.now()}`,
+        boardId,
+        title: title.trim(),
+        purpose,
+        position: { x: 100, y: 100 },
+        size: { 
+          width: 300, 
+          height: purpose === 'links' ? 300 : 200 // Make links containers taller
         },
-        body: JSON.stringify({
-          boardId, // Include boardId in the payload
-          title,
-          purpose,
-          position: initialPosition,
-          size: initialSize,
-          // Add other default fields if needed (e.g., style)
-        }),
-      });
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || `Failed to create container: ${response.status}`);
-      }
-
-      console.log('Container created successfully:', responseData);
-      // Reset form
+      onCreateSuccess?.(newContainer);
       setTitle('');
       setPurpose('notes');
-      // Call success callback if provided
-      onCreateSuccess?.(responseData);
-
     } catch (err: any) {
-      console.error('Error creating container:', err);
-      setError(err.message || 'Failed to create container.');
+      setError(err.message || 'Failed to create container');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '4px', backgroundColor: '#fff' }}>
-      <h3>Create New Container</h3>
-      <div>
-        <label htmlFor="container-title">Container Title:</label>
-        <input
-          id="container-title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      <div style={{ marginTop: '10px' }}>
-        <label htmlFor="container-purpose">Purpose:</label>
-        <select
-          id="container-purpose"
-          value={purpose}
-          onChange={(e) => setPurpose(e.target.value as ContainerPurpose)}
-          required
-          disabled={loading}
-        >
-          <option value="notes">Notes</option>
-          <option value="links">Links</option>
-          {/* Add more purposes later */}
-        </select>
-      </div>
+    <div className="create-container-form">
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="container-title">Container Title:</label>
+          <input
+            id="container-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter container title..."
+            required
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+            }}
+          />
+        </div>
 
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+        <div className="form-group">
+          <label htmlFor="container-purpose">Purpose:</label>
+          <select
+            id="container-purpose"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value as ContainerPurpose)}
+            required
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+            }}
+          >
+            <option value="notes">📝 Notes</option>
+            <option value="links">🔗 Links</option>
+          </select>
+        </div>
 
-      <button type="submit" disabled={loading} style={{ marginTop: '15px' }}>
-        {loading ? 'Creating...' : 'Create Container'}
-      </button>
-    </form>
+        {error && (
+          <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '8px' }}>
+            {error}
+          </div>
+        )}
+
+        <div className="form-actions" style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          marginTop: '16px' 
+        }}>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              flex: 1,
+            }}
+          >
+            {loading ? 'Creating...' : 'Create Container'}
+          </button>
+          
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#f3f4f6',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 };
 
-export default CreateContainerForm;
+export default CreateContainerForm; 

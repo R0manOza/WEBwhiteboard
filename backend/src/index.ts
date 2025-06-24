@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import admin from './config/firebaseAdmin';
 import authRoutes from './routes/authRoutes';
 import { initializeSocket } from './socket/socketHandler';
+import boardsRouter from './routes/boards';
 
 const app: Express = express();
 const port = process.env.PORT || 3001; // Backend port
@@ -39,6 +40,9 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // Auth routes (login, etc.)
 app.use('/api/auth', authRoutes);
+
+// Boards routes
+app.use('/api/boards', boardsRouter);
 
 // Start the server (only need this once!)
 server.listen(port, () => {
