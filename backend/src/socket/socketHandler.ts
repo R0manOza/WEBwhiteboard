@@ -32,6 +32,15 @@ export function initializeSocket(io: Server) {
       socket.to(`board:${boardId}`).emit('cursorMoved', { boardId, userId: user.uid, x, y });
     });
 
+    // Handle drawing status events
+    socket.on('drawingStatus', ({ boardId, isDrawing }) => {
+      socket.to(`board:${boardId}`).emit('userDrawingStatus', {
+        boardId,
+        userId: user.uid,
+        isDrawing,
+      });
+    });
+
     // Add more event handlers as needed
 
     socket.on('disconnect', () => {
