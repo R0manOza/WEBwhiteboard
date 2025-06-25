@@ -1,26 +1,28 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { useSocket } from "../hooks/useSocket";
-import { useAuth } from "../contexts/AuthContext";
-import throttle from "lodash.throttle";
-import type { Board, Container as ContainerType } from "../../../shared/types";
-import BoardSettingsModal from "../components/Board/BoardSettingsModal";
-import Container from "../components/Board/Container";
-import CreateContainerForm from "../components/Board/CreateContainerForm";
-import DrawingCanvas from "../components/Board/DrawingCanvas";
-import "./BoardViewPage.css";
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import { useSocket } from '../hooks/useSocket';
+import { useAuth } from '../contexts/AuthContext';
+import throttle from 'lodash.throttle'; // Already imported
+import debounce from 'lodash.debounce'; // Import debounce for updates
+// Import ContainerPurpose type from shared types
+import type { Board, Container as ContainerType, DrawingStroke, ContainerPurpose } from '../../../shared/types';
+import BoardSettingsModal from '../components/Board/BoardSettingsModal';
+import Container from '../components/Board/Container';
+import CreateContainerForm from '../components/Board/CreateContainerForm';
+import DrawingCanvas from '../components/Board/DrawingCanvas'; // Assuming this component is still used for full board drawing
+import './BoardViewPage.css';
 
 // Define a unique ID for the sample board
-const SAMPLE_BOARD_ID = "sample-solo-board";
+const SAMPLE_BOARD_ID = 'sample-solo-board';
 
 // Define static data for the sample board
 const sampleBoardData: Board = {
   id: SAMPLE_BOARD_ID,
-  name: "Sample Solo Board",
-  description: "A static board to explore features without backend data.",
-  visibility: "public", // Doesn't affect solo mode
-  ownerId: "sample-user-id", // Placeholder owner ID
-  members: { "sample-user-id": "owner" }, // Placeholder member
+  name: 'Sample Solo Board',
+  description: 'A static board to explore features without backend data.',
+  visibility: 'public', // Doesn't affect solo mode
+  ownerId: 'sample-user-id', // Placeholder owner ID
+  members: { 'sample-user-id': 'owner' }, // Placeholder member
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
@@ -28,20 +30,20 @@ const sampleBoardData: Board = {
 // Define static data for initial containers on the sample board
 const sampleContainersData: ContainerType[] = [
   {
-    id: "sample-container-1",
+    id: 'sample-container-1',
     boardId: SAMPLE_BOARD_ID,
-    title: "Welcome!",
-    purpose: "notes",
+    title: 'Welcome!',
+    purpose: 'notes',
     position: { x: 50, y: 50 },
     size: { width: 300, height: 200 },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
   {
-    id: "sample-container-2",
+    id: 'sample-container-2',
     boardId: SAMPLE_BOARD_ID,
-    title: "Example Links",
-    purpose: "links",
+    title: 'Example Links',
+    purpose: 'links',
     position: { x: 400, y: 100 },
     size: { width: 350, height: 300 },
     createdAt: Date.now(),
@@ -50,478 +52,611 @@ const sampleContainersData: ContainerType[] = [
   // Add more sample containers if desired
 ];
 
+
 // Define a type for cursor data received from others
 interface CursorPosition {
   boardId: string;
   userId: string;
   x: number;
-  y: number;
+  y: number; // Fixed typo here
 }
 
 function BoardViewPage() {
   const { boardId } = useParams<{ boardId: string }>();
+  // Ensure boardId is available before passing to useSocket
+  const { socket, isConnected } = useSocket(boardId || '');
   const { user, loading: authLoading } = useAuth();
-  const { socket, isConnected } = useSocket(boardId || ""); // Pass boardId to socket hook
 
   const [board, setBoard] = useState<Board | null>(null);
-  const [boardLoading, setBoardLoading] = useState(true);
+  const [boardLoading, setBoardLoading] = useState(true); // Loading state for initial board/container fetch
   const [boardError, setBoardError] = useState<string | null>(null);
 
-  const [otherCursors, setOtherCursors] = useState<{
-    [userId: string]: { x: number; y: number };
-  }>({});
+  const [otherCursors, setOtherCursors] = useState<{ [userId: string]: { x: number; y: number } }>(
+    {} // Initialize with an empty object
+  );
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [hasAccess, setHasAccess] = useState(false); // Controls rendering of board content vs join form
 
-  // Container state
+  // Container state - Now managed based on initial fetch and socket events
   const [containers, setContainers] = useState<ContainerType[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  // State to track if a container is currently being created via API
+  const [isCreatingContainer, setIsCreatingContainer] = useState(false);
+   // State to track errors during container creation
+  const [createContainerError, setCreateContainerError] = useState<string | null>(null);
+
 
   // Drawing mode state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
+  // Note: Full board drawing strokes state might need to live here or in DrawingCanvas
+  // For now, DrawingCanvas manages its own strokes and listens to socket events directly.
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null); // Ref for the main canvas area
 
-  const [onlineUsers, setOnlineUsers] = useState<
-    { userId: string; displayName: string }[]
-  >([]);
-  const [drawingUsers, setDrawingUsers] = useState<{
-    [userId: string]: boolean;
-  }>({});
-  const [ownerName, setOwnerName] = useState<string>(""); // Display name of the board owner
+  const [onlineUsers, setOnlineUsers] = useState<{ userId: string; displayName: string }[]>([]);
+  const [drawingUsers, setDrawingUsers] = useState<{ [userId: string]: boolean }>({}); // Tracks who is drawing
+  const [ownerName, setOwnerName] = useState<string>(''); // Display name of the board owner
 
-  // Throttled Cursor Position Sender
+  // Throttled Cursor Position Sender (already implemented)
   const sendCursorPosition = useCallback(
     throttle((x: number, y: number) => {
-      if (socket && isConnected && boardId && user && hasAccess) {
-        // Ensure user and access
-        socket.emit("cursorPosition", { boardId, x, y });
+      if (socket && isConnected && boardId && user && hasAccess) { // Ensure user and access
+        socket.emit('cursorPosition', { boardId, x, y });
       }
     }, 50),
     [socket, isConnected, boardId, user, hasAccess] // Dependencies for useCallback
   );
 
-  // Container handlers
-  const handleCreateContainer = (newContainer: ContainerType) => {
-    // Note: For the sample board, this only updates local state.
-    // When backend is implemented for containers, this will also trigger an API call
-    // and the state update will likely happen via a WebSocket event listener.
-    console.log("Attempting to create container:", newContainer);
-    // Ensure the new container has a unique ID if the source doesn't provide one (like the mock form)
-    if (!newContainer.id) {
-      newContainer.id = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Debounced function for sending container position/size updates
+  // This function will only make the API call
+  const updateContainerApi = useCallback(
+      debounce(async (containerId: string, updates: { position?: { x: number; y: number }; size?: { width: number; height: number } }) => {
+        console.log(`Attempting to send debounced update for container ${containerId}:`, updates);
+        if (!user || !boardId || boardId === SAMPLE_BOARD_ID) {
+             console.warn("Skipping API update for container (no user, boardId, or it's sample board)");
+             return; // Don't call API for sample board or if requirements not met
+        }
+
+        try {
+            const token = await user.getIdToken();
+            const response = await fetch(`/api/boards/${boardId}/containers/${containerId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updates),
+            });
+
+            if (!response.ok) {
+                 // Handle API error during update
+                 console.error(`Failed to update container ${containerId} via API:`, response.status, response.statusText);
+                 // TODO: Maybe revert local state or show a notification?
+                 // Reverting state is complex with optimistic updates and real-time sync.
+                 // For now, rely on the user seeing the correct state eventually via socket or refresh.
+            } else {
+                 console.log(`Container ${containerId} updated successfully via API.`);
+                 // Note: The state update should ideally come from the socket event,
+                 // which the backend broadcasts after successfully saving the update.
+                 // Optimistic update already happened in handleContainerPositionChange/SizeChange
+            }
+        } catch (error) {
+             console.error(`Error sending container update API call for ${containerId}:`, error);
+             // TODO: Handle network errors etc.
+             // Show user a network error notification?
+        }
+      }, 300), // Debounce time: 300ms
+      [user, boardId] // Debounce function dependencies
+  );
+
+  // Container handlers - these now trigger API calls for real boards
+  const handleCreateContainer = async (formData: { title: string; purpose: ContainerPurpose }) => {
+    console.log("Attempting to create container with form data:", formData);
+    if (!user || !boardId) {
+         console.warn("Skipping container creation (no user or boardId)");
+         return;
     }
-    setContainers((prev) => [...prev, newContainer]);
-    setShowCreateForm(false);
-    console.log("Container created (locally):", newContainer.id);
+
+    setCreateContainerError(null); // Clear previous errors
+    setIsCreatingContainer(true); // Indicate creation is in progress
+
+    // Default initial position and size - can be improved later
+    // Example: place it near the center of the current view, or relative to mouse
+    const defaultPosition = { x: 100, y: 100 };
+    const defaultSize = {
+        width: 300,
+        height: formData.purpose === 'links' ? 300 : 200 // Make links containers taller
+    };
+
+     // For sample board, just update local state
+    if (boardId === SAMPLE_BOARD_ID) {
+         console.log("Creating container locally for sample board.");
+          const newContainer: ContainerType = {
+            id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Local temp ID
+            boardId: boardId,
+            title: formData.title.trim(),
+            purpose: formData.purpose,
+            position: defaultPosition,
+            size: defaultSize,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          setContainers(prev => [...prev, newContainer]);
+          setShowCreateForm(false); // Close form on success
+          setIsCreatingContainer(false); // Finish local creation state
+          console.log("Sample container created locally:", newContainer.id);
+          return;
+    }
+
+
+    // For real boards, call the backend API
+    try {
+      const token = await user.getIdToken();
+      const payload = {
+        boardId: boardId,
+        title: formData.title.trim(),
+        purpose: formData.purpose,
+        position: defaultPosition, // Send initial position
+        size: defaultSize,       // Send initial size
+        // Backend will add ID, ownerId, timestamps
+      };
+
+      console.log("Calling backend API to create container:", payload);
+      const response = await fetch(`/api/boards/${boardId}/containers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Backend API container creation failed:", response.status, data);
+        setCreateContainerError(data.error || 'Failed to create container via API.');
+         // Do NOT update local state here. Wait for WebSocket event.
+      } else {
+         console.log("Backend API container creation successful:", data);
+         // Success - The new container should be added to state via the WebSocket listener ('containerAdded' event)
+         // Close the form even if we wait for socket event, as the API call was successful
+         setShowCreateForm(false);
+      }
+
+    } catch (err: any) {
+      console.error("Error calling backend API to create container:", err);
+      setCreateContainerError(err.message || 'Network error during container creation.');
+       // Do NOT update local state here. Wait for WebSocket event (or handle network error state).
+    } finally {
+      setIsCreatingContainer(false); // Creation process finished (either success or error)
+    }
   };
 
-  const handleContainerPositionChange = (
-    containerId: string,
-    newPosition: { x: number; y: number }
-  ) => {
-    // Note: For the sample board, this only updates local state.
-    // When backend is implemented, this will trigger an API call
-    // and the state update might happen via a WebSocket event listener
-    // or optimistic update followed by reconciliation.
-    setContainers((prev) =>
-      prev.map((container) =>
+  // Handle position changes - triggers debounced API call for real boards
+  const handleContainerPositionChange = useCallback((containerId: string, newPosition: { x: number; y: number }) => {
+    // Update local state immediately for perceived responsiveness (optimistic update)
+    setContainers(prev =>
+      prev.map(container =>
         container.id === containerId
-          ? { ...container, position: newPosition, updatedAt: Date.now() }
+          ? { ...container, position: newPosition, updatedAt: Date.now() } // Update timestamp locally too
           : container
       )
     );
-    // TODO: Add backend API call here for non-sample boards
-  };
+     console.log(`Container ${containerId}: Position updated locally.`);
 
-  const handleContainerSizeChange = (
-    containerId: string,
-    newSize: { width: number; height: number }
-  ) => {
-    // Note: For the sample board, this only updates local state.
-    // When backend is implemented, this will trigger an API call.
-    setContainers((prev) =>
-      prev.map((container) =>
+    // Trigger debounced API call for real boards
+     if (boardId !== SAMPLE_BOARD_ID && user) { // Ensure it's a real board and user is logged in
+         updateContainerApi(containerId, { position: newPosition });
+     }
+  }, [boardId, user, updateContainerApi]); // updateContainerApi is a stable ref thanks to useCallback/debounce
+
+  // Handle size changes - triggers debounced API call for real boards
+  const handleContainerSizeChange = useCallback((containerId: string, newSize: { width: number; height: number }) => {
+    // Update local state immediately (optimistic update)
+    setContainers(prev =>
+      prev.map(container =>
         container.id === containerId
-          ? { ...container, size: newSize, updatedAt: Date.now() }
+          ? { ...container, size: newSize, updatedAt: Date.now() } // Update timestamp locally too
           : container
       )
     );
-    // TODO: Add backend API call here for non-sample boards
+     console.log(`Container ${containerId}: Size updated locally.`);
+
+    // Trigger debounced API call for real boards
+    if (boardId !== SAMPLE_BOARD_ID && user) { // Ensure it's a real board and user is logged in
+        updateContainerApi(containerId, { size: newSize });
+    }
+  }, [boardId, user, updateContainerApi]); // updateContainerApi is a stable ref thanks to useCallback/debounce
+
+
+  // Handle container deletion - triggers API call for real boards
+  const handleContainerDelete = async (containerId: string) => {
+    if (!user || !boardId) {
+         console.warn("Skipping container deletion (no user or boardId)");
+         return;
+    }
+    // Confirm before deleting (optional but good UX)
+     if (!window.confirm('Are you sure you want to delete this container?')) {
+         return;
+     }
+
+     // For sample board, just update local state
+    if (boardId === SAMPLE_BOARD_ID) {
+         console.log("Deleting container locally for sample board:", containerId);
+         setContainers(prev => prev.filter(container => container.id !== containerId));
+         return;
+    }
+
+    // For real boards, call the backend API
+    try {
+      const token = await user.getIdToken();
+      console.log(`Calling backend API to delete container: ${containerId}`);
+      const response = await fetch(`/api/boards/${boardId}/containers/${containerId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Backend API container deletion failed:", response.status);
+        // TODO: Show deletion error to user
+        alert('Failed to delete container.'); // Simple error feedback
+      } else {
+         console.log(`Container ${containerId} deleted successfully via API.`);
+         // Success - The container should be removed from state via the WebSocket listener ('containerDeleted' event)
+      }
+
+    } catch (err: any) {
+      console.error(`Error calling backend API to delete container ${containerId}:`, err);
+      // TODO: Handle network error etc.
+       alert('Network error during container deletion.'); // Simple error feedback
+    }
+     // Note: We don't remove from local state immediately for real boards.
+     // The state update comes from the socket event to avoid conflicts.
   };
 
-  const handleContainerDelete = (containerId: string) => {
-    // Note: For the sample board, this only updates local state.
-    // When backend is implemented, this will trigger an API call.
-    setContainers((prev) =>
-      prev.filter((container) => container.id !== containerId)
-    );
-    // TODO: Add backend API call here for non-sample boards
-  };
 
-  // Effect to fetch Board Data (or load sample data)
+  // Effect to fetch Board Data AND Containers (or load sample data)
   useEffect(() => {
     console.log(`BoardViewPage (${boardId}): Running data fetch effect.`);
 
     // --- START: Sample Board Logic ---
     if (boardId === SAMPLE_BOARD_ID) {
-      console.log(`BoardViewPage (${boardId}): Loading sample board.`);
-      setBoardLoading(false); // Loading finishes immediately
-      setHasAccess(true); // Access is granted automatically
-      setBoard(sampleBoardData); // Set static board data
-      setContainers(sampleContainersData); // Set static container data
-      setBoardError(null); // Clear any previous error
-      // For sample board, the "owner" is just a placeholder
-      setOwnerName("Sample User");
-      // For sample board, we don't need to wait for auth to load or fetch user info
-      return; // Crucially, stop the effect here if it's the sample board
+        console.log(`BoardViewPage (${boardId}): Loading sample board.`);
+        setBoardLoading(false); // Loading finishes immediately
+        setHasAccess(true);    // Access is granted automatically
+        setBoard(sampleBoardData); // Set static board data
+        setContainers(sampleContainersData); // Set static container data
+        setBoardError(null);   // Clear any previous error
+        setOwnerName('Sample User'); // Set sample owner name
+        // For sample board, we don't need to wait for auth to load or fetch user info
+        return; // Crucially, stop the effect here if it's the sample board
     }
     // --- END: Sample Board Logic ---
 
-    // If not sample board, proceed with authentication and backend fetch checks
-    if (!boardId || !user) {
-      console.log(
-        `BoardViewPage (${boardId}): Skipping backend fetch. Missing boardId or user.`
-      );
-      setBoardLoading(false);
-      setHasAccess(false);
-      setBoard(null);
-      setBoardError(null);
-      // Do NOT return here yet, let the authLoading check run if needed
-    }
 
+    // If not sample board, proceed with authentication and backend fetch checks
     // Wait for authentication state to be determined for real boards
     if (authLoading) {
-      console.log(
-        `BoardViewPage (${boardId}): Waiting for auth to load for backend fetch.`
-      );
-      setBoardLoading(true);
+      console.log(`BoardViewPage (${boardId}): Waiting for auth to load for backend fetch.`);
+      setBoardLoading(true); // Still loading while auth is loading
       return; // Wait for auth state before fetching
     }
 
     // If we are here, it's a real board and auth is loaded (user is either null or exists)
-    // If user is null, the previous check should have set hasAccess to false and loading to false.
-    // If user exists, proceed with fetch:
+    // If user is null, the check below will set boardError and access=false.
     if (!user) {
-      console.log(
-        `BoardViewPage (${boardId}): Auth loaded, but no user. Cannot fetch real board.`
-      );
-      setBoardLoading(false);
-      setHasAccess(false); // Ensure access is false if user is null after auth loads
-      return; // Stop if user is null
+         console.log(`BoardViewPage (${boardId}): Auth loaded, but no user. Cannot fetch real board.`);
+         setBoardLoading(false);
+         setHasAccess(false); // Ensure access is false if user is null after auth loads
+         setBoard(null); // Clear board state
+         setContainers([]); // Clear containers state
+         setBoardError('Authentication required to view this board.'); // Set auth error
+         setOwnerName('');
+         return; // Stop if user is null
     }
 
-    const fetchBoardData = async () => {
-      console.log(
-        `BoardViewPage (${boardId}): Starting backend data fetch for authenticated user ${user.uid}`
-      );
+
+    const fetchBoardAndContainerData = async () => {
+      console.log(`BoardViewPage (${boardId}): Starting backend data fetch for authenticated user ${user.uid}`);
       setBoardLoading(true); // Still loading for backend fetch
       setBoardError(null);
       setHasAccess(false); // Assume no access until verified
+      setBoard(null); // Clear previous board state
+      setContainers([]); // Clear previous containers state
+      setOwnerName('');
 
       try {
         const token = await user.getIdToken();
 
         // --- Fetch Board Data ---
-        console.log(
-          `BoardViewPage (${boardId}): Fetching board details from /api/boards/${boardId}`
-        );
+        console.log(`BoardViewPage (${boardId}): Fetching board details from /api/boards/${boardId}`);
         const boardResponse = await fetch(`/api/boards/${boardId}`, {
           headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         });
 
+        // If board fetch fails (e.g., 404, 403)
         if (!boardResponse.ok) {
-          const errData = await boardResponse
-            .json()
-            .catch(() => ({ message: "Failed to fetch board data." }));
-          throw new Error(
-            errData.message ||
-              `Error fetching board: ${boardResponse.status} ${boardResponse.statusText}`
-          );
+          const errData = await boardResponse.json().catch(() => ({ message: 'Failed to fetch board data.' }));
+          // Handle specific errors like 403 (Forbidden) or 404 (Not Found)
+          if (boardResponse.status === 403) {
+               setBoardError('Access Denied. You are not a member of this board.');
+               setHasAccess(false); // Explicitly set false
+           } else if (boardResponse.status === 404) {
+               setBoardError('Board not found.');
+               setHasAccess(false); // Explicitly set false
+           }
+          else {
+               setBoardError(errData.error || errData.message || `Error fetching board: ${boardResponse.status} ${boardResponse.statusText}`);
+               setHasAccess(false); // Explicitly set false
+          }
+          setBoard(null);
+          setContainers([]);
+          setOwnerName('');
+          // Note: Access is not granted, so no need to fetch containers.
+          return; // Stop fetching process if board details failed
         }
 
         const boardData: Board = await boardResponse.json();
         setBoard(boardData);
-        console.log(
-          `BoardViewPage (${boardId}): Fetched board data successfully.`,
-          boardData
-        );
+        console.log(`BoardViewPage (${boardId}): Fetched board data successfully.`, boardData);
 
-        // --- TODO: Add Fetch Containers for real boards ---
-        // This part is pending backend implementation. When implemented,
-        // this is where you'll fetch containers for the board.
-        // Example (replace with actual fetch):
-        // const containersResponse = await fetch(`/api/boards/${boardId}/containers`, {
-        //     headers: { 'Authorization': `Bearer ${token}` }
-        // });
-        // if (containersResponse.ok) {
-        //    const containersData = await containersResponse.json();
-        //    setContainers(containersData); // Set real containers
-        //    console.log(`BoardViewPage (${boardId}): Fetched ${containersData.length} containers.`);
-        // } else {
-        //    console.warn("Failed to fetch containers for board:", boardId, containersResponse.status);
-        //    setContainers([]); // Set empty array if fetch fails
-        // }
-        // --- END TODO ---
 
-        // Access Check for real boards
-        const userUid = user.uid;
-        const isMember =
-          boardData.members && boardData.members[userUid] !== undefined;
-        const isPublic = boardData.visibility === "public";
-        const userHasAccess = isPublic || isMember;
-        setHasAccess(userHasAccess);
-        console.log(
-          `BoardViewPage (${boardId}): User ${userUid} has access: ${userHasAccess}`
-        );
+        // --- Fetch Containers for real boards ---
+        console.log(`BoardViewPage (${boardId}): Fetching containers from /api/boards/${boardId}/containers`);
+         // Assuming a new endpoint GET /api/boards/:boardId/containers exists
+        const containersResponse = await fetch(`/api/boards/${boardId}/containers`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (containersResponse.ok) {
+           const containersData: ContainerType[] = await containersResponse.json();
+           setContainers(containersData); // Set real containers
+           console.log(`BoardViewPage (${boardId}): Fetched ${containersData.length} containers.`);
+        } else {
+           console.warn("Failed to fetch containers for board:", boardId, containersResponse.status);
+           setContainers([]); // Set empty array if fetch fails
+           // Decide if failing to fetch containers should be a hard error or just show an empty board
+           // For now, let's allow the board to load without containers if that fails.
+           // TODO: Display a warning message to the user if containers fail to load.
+        }
+
+
+        // Access Check for real boards (already done by backend on board fetch, but confirm frontend state)
+        // If board fetch was successful, and we didn't get a 403/404 above, access is implicitly granted.
+        // You might still check boardData.visibility and boardData.members if your backend
+        // GET /api/boards/:id is less strict, but based on auth middleware, it should already enforce this.
+        setHasAccess(true); // If board fetch was ok, user has access
 
         // Fetch owner name for display for real boards
-        if (boardData.ownerId && boardData.ownerId !== userUid) {
-          // Avoid fetching own user info
-          const userInfoRes = await fetch(
-            `/api/auth/userInfo?uid=${boardData.ownerId}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          if (userInfoRes.ok) {
-            const userInfoData = await userInfoRes.json();
-            setOwnerName(userInfoData.displayName || boardData.ownerId);
-          } else {
-            setOwnerName(boardData.ownerId); // Fallback to UID
-          }
-        } else {
-          setOwnerName(
-            user.displayName || user.email || boardData.ownerId || "Me"
-          ); // Handle owning user or missing data
-        }
+         if (boardData.ownerId) {
+            const userInfoRes = await fetch(`/api/auth/userInfo?uid=${boardData.ownerId}`, {
+                 headers: { 'Authorization': `Bearer ${token}` }
+            });
+             if(userInfoRes.ok) {
+                const userInfoData = await userInfoRes.json();
+                setOwnerName(userInfoData.displayName || boardData.ownerId);
+             } else {
+                setOwnerName(boardData.ownerId); // Fallback to UID
+             }
+         } else {
+            setOwnerName(user.displayName || user.email || 'Unknown Owner'); // Fallback
+         }
+
+
       } catch (err: any) {
-        console.error(
-          `BoardViewPage (${boardId}): Error during backend data fetch process:`,
-          err
-        );
-        setBoardError(err.message || "Failed to load board.");
+        console.error(`BoardViewPage (${boardId}): Error during backend data fetch process:`, err);
+        // Handle network errors or unexpected issues during fetch
+        setBoardError(err.message || 'Failed to load board.');
         setBoard(null);
         setHasAccess(false); // Ensure access is false on error
         setContainers([]); // Clear containers on error
-        setOwnerName("");
+        setOwnerName('');
       } finally {
-        setBoardLoading(false);
-        console.log(
-          `BoardViewPage (${boardId}): Backend data fetch process finished. Loading: ${false}.`
-        );
+        setBoardLoading(false); // Loading finishes regardless of fetch success/failure
+        console.log(`BoardViewPage (${boardId}): Backend data fetch process finished. Loading: ${false}.`);
       }
     };
 
     // Only fetch data if it's not the sample board AND auth is loaded AND user exists
-    if (boardId !== SAMPLE_BOARD_ID && user) {
-      fetchBoardData(); // Call the backend fetch function
+    if (boardId && boardId !== SAMPLE_BOARD_ID && user) {
+         fetchBoardAndContainerData(); // Call the backend fetch function
     }
+    // Note: If authLoading is false but user is null, the check above will set boardError and access=false.
 
     return () => {
       console.log(`BoardViewPage (${boardId}): Cleaning up data fetch effect.`);
+       // Cancel pending debounced updates when boardId changes or component unmounts
+       updateContainerApi.cancel();
     };
-  }, [boardId, user, authLoading]); // Re-run effect if these dependencies change
+
+  }, [boardId, user, authLoading, updateContainerApi]); // Added updateContainerApi dependency
 
   // Effect for Mouse Move Listener (for cursor position)
-  // This effect runs for both sample and real boards if hasAccess is true
+  // This effect runs for both sample and real boards if hasAccess is true and user exists
+  // Note: Cursor requires user ID for distinction, so only runs if user is logged in.
   useEffect(() => {
     const canvasElement = canvasRef.current;
     const handleMouseMove = (event: MouseEvent) => {
-      if (!canvasElement) return;
+      if (!canvasElement || !user) return; // Ensure canvas and user
       const rect = canvasElement.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       sendCursorPosition(x, y);
     };
 
-    if (canvasElement && hasAccess) {
-      console.log(
-        `BoardViewPage (${boardId}): Attaching mousemove listener for cursor.`
-      );
-      canvasElement.addEventListener("mousemove", handleMouseMove);
+    // Attach listener only if canvas, hasAccess, and user exist
+    if (canvasElement && hasAccess && user) {
+      console.log(`BoardViewPage (${boardId}): Attaching mousemove listener for cursor.`);
+      canvasElement.addEventListener('mousemove', handleMouseMove);
     } else {
-      console.log(
-        `BoardViewPage (${boardId}): Skipping mousemove listener attachment (no canvas, no access, or sample board without explicit user).`
-      );
-      // Note: For the sample board without real auth, user might be null initially, preventing listener.
-      // This is acceptable for a simple solo demo mode.
+      console.log(`BoardViewPage (${boardId}): Skipping mousemove listener attachment (no canvas, no access, or no user).`);
     }
 
     return () => {
       if (canvasElement) {
         console.log(`BoardViewPage (${boardId}): Removing mousemove listener.`);
-        canvasElement.removeEventListener("mousemove", handleMouseMove);
+        canvasElement.removeEventListener('mousemove', handleMouseMove);
         sendCursorPosition.cancel(); // Cancel any pending throttled calls
       }
     };
-  }, [canvasRef.current, sendCursorPosition, hasAccess, boardId]); // Added boardId to dependencies
+  }, [canvasRef.current, sendCursorPosition, hasAccess, boardId, user]); // Added user dependency
 
-  // Effect for Socket Listeners (cursor movements, user presence, drawing sync, etc.)
-  // This effect runs for both sample and real boards if socket is connected and hasAccess is true
+  // Effect for Socket Listeners (cursor movements, user presence, drawing sync, CONTAINER SYNC)
   useEffect(() => {
     // Only set up listeners if socket is connected, hasAccess is true, boardId is valid, and user exists
     // (user is needed to exclude self from other users' events)
     if (!socket || !isConnected || !hasAccess || !boardId || !user) {
-      console.log(
-        `BoardViewPage (${boardId}): Skipping socket listener setup (socket/access/boardId/user missing).`
-      );
+      console.log(`BoardViewPage (${boardId}): Skipping socket listener setup (socket/access/boardId/user missing).`);
       return;
     }
 
     console.log(`BoardViewPage (${boardId}): Setting up socket listeners.`);
 
+    // --- Cursor/Presence Listeners ---
     const handleCursorMoved = (data: CursorPosition) => {
-      if (data.boardId === boardId && data.userId !== user.uid) {
-        // Only update for other users on this board
-        setOtherCursors((prev) => ({
+      if (data.boardId === boardId && data.userId !== user.uid) { // Only update for other users on this board
+        setOtherCursors(prev => ({
           ...prev,
-          [data.userId]: { x: data.x, y: data.y },
+          [data.userId]: { x: data.x, y: data.y }
         }));
       }
     };
 
-    // The 'userJoined' and 'userLeft' events might be handled by the 'onlineUsers' event instead
-    // based on the socketHandler.ts implementation. Let's primarily rely on 'onlineUsers'.
-    // const handleUserJoined = (data: { boardId: string; userId: string }) => {
-    //   if (data.boardId === boardId) {
-    //     console.log(`BoardViewPage (${boardId}): User ${data.userId} joined the board.`);
-    //   }
-    // };
-
-    // const handleUserLeft = (data: { boardId: string; userId: string }) => {
-    //   if (data.boardId === boardId) {
-    //     console.log(`BoardViewPage (${boardId}): User ${data.userId} left the board.`);
-    //     // Remove cursor and drawing status for the leaving user
-    //     setOtherCursors(prev => {
-    //       const newCursors = { ...prev };
-    //       delete newCursors[data.userId];
-    //       return newCursors;
-    //     });
-    //      setDrawingUsers(prev => {
-    //       const newDrawing = { ...prev };
-    //       delete newDrawing[data.userId];
-    //       return newDrawing;
-    //     });
-    //   }
-    // };
-
-    const handleOnlineUsers = (data: {
-      boardId: string;
-      users: { userId: string; displayName: string }[];
-    }) => {
+     const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
       if (data.boardId === boardId) {
-        console.log(
-          `BoardViewPage (${boardId}): Received online users update:`,
-          data.users
-        );
+        console.log(`BoardViewPage (${boardId}): Received online users update:`, data.users);
         setOnlineUsers(data.users);
         // Clean up cursors/drawing status for users no longer online
-        setOtherCursors((prevCursors) => {
-          const onlineUserIds = new Set(data.users.map((u) => u.userId));
-          const updatedCursors = { ...prevCursors };
-          for (const userId in updatedCursors) {
-            if (!onlineUserIds.has(userId) && userId !== user.uid) {
-              delete updatedCursors[userId];
-            }
-          }
-          return updatedCursors;
+        setOtherCursors(prevCursors => {
+             const onlineUserIds = new Set(data.users.map(u => u.userId));
+             const updatedCursors = { ...prevCursors };
+             for (const userId in updatedCursors) {
+                 // Keep cursors for users still online (excluding self)
+                 if (userId !== user.uid && !onlineUserIds.has(userId)) {
+                     delete updatedCursors[userId];
+                 }
+             }
+             return updatedCursors;
         });
-        setDrawingUsers((prevDrawing) => {
-          const onlineUserIds = new Set(data.users.map((u) => u.userId));
-          const updatedDrawing = { ...prevDrawing };
-          for (const userId in updatedDrawing) {
-            if (!onlineUserIds.has(userId) && userId !== user.uid) {
-              delete updatedDrawing[userId];
-            }
-          }
-          return updatedDrawing;
+         setDrawingUsers(prevDrawing => {
+             const onlineUserIds = new Set(data.users.map(u => u.userId));
+             const updatedDrawing = { ...prevDrawing };
+             for (const userId in updatedDrawing) {
+                 // Keep drawing status for users still online (excluding self)
+                 if (userId !== user.uid && !onlineUserIds.has(userId)) {
+                     delete updatedDrawing[userId];
+                 }
+             }
+             return updatedDrawing;
         });
       }
     };
 
-    const handleUserDrawingStatus = (data: {
-      boardId: string;
-      userId: string;
-      isDrawing: boolean;
-    }) => {
+    const handleUserDrawingStatus = (data: { boardId: string; userId: string; isDrawing: boolean }) => {
       if (data.boardId === boardId && data.userId !== user.uid) {
-        console.log(
-          `BoardViewPage (${boardId}): User ${data.userId} is ${data.isDrawing ? "drawing" : "not drawing"}`
-        );
-        setDrawingUsers((prev) => ({ ...prev, [data.userId]: data.isDrawing }));
+        console.log(`BoardViewPage (${boardId}): User ${data.userId} is ${data.isDrawing ? 'drawing' : 'not drawing'}`);
+        setDrawingUsers(prev => ({ ...prev, [data.userId]: data.isDrawing }));
       }
     };
-    // TODO: Add listeners for containerAdded, containerUpdated, containerDeleted events here
-    // These listeners should update the 'containers' state immutably based on events from the backend.
-    // This is how other users' container changes sync in real-time for non-sample boards.
 
-    socket.on("cursorMoved", handleCursorMoved);
-    // socket.on('userJoined', handleUserJoined); // Using onlineUsers instead
-    // socket.on('userLeft', handleUserLeft);   // Using onlineUsers instead
-    socket.on("onlineUsers", handleOnlineUsers);
-    socket.on("userDrawingStatus", handleUserDrawingStatus);
+     // --- Container Listeners (NEW) ---
+     const handleContainerAdded = (data: { boardId: string; container: ContainerType }) => {
+         if (data.boardId === boardId) {
+             console.log(`BoardViewPage (${boardId}): Received containerAdded event:`, data.container);
+             // Check if container already exists (e.g., from optimistic update or duplicate event)
+             // We don't do optimistic update for creation with API calls now, so a simple check is fine.
+             if (!containers.some(c => c.id === data.container.id)) {
+                 setContainers(prev => [...prev, data.container]);
+             } else {
+                 console.warn(`BoardViewPage (${boardId}): Received containerAdded for existing container ${data.container.id}. Ignoring.`);
+             }
+         }
+     };
+
+     const handleContainerUpdated = (data: { boardId: string; containerId: string; updates: Partial<ContainerType> }) => {
+          if (data.boardId === boardId) {
+              console.log(`BoardViewPage (${boardId}): Received containerUpdated event for ${data.containerId}:`, data.updates);
+              setContainers(prev =>
+                  prev.map(container =>
+                      container.id === data.containerId
+                          ? { ...container, ...data.updates } // Merge updates
+                          : container
+                  )
+              );
+          }
+     };
+
+     const handleContainerDeleted = (data: { boardId: string; containerId: string }) => {
+          if (data.boardId === boardId) {
+              console.log(`BoardViewPage (${boardId}): Received containerDeleted event for ${data.containerId}`);
+              setContainers(prev => prev.filter(container => container.id !== data.containerId));
+          }
+     };
+
+
+    socket.on('cursorMoved', handleCursorMoved);
+    socket.on('onlineUsers', handleOnlineUsers);
+    socket.on('userDrawingStatus', handleUserDrawingStatus);
+    // Attach new container listeners
+    socket.on('containerAdded', handleContainerAdded);
+    socket.on('containerUpdated', handleContainerUpdated);
+    socket.on('containerDeleted', handleContainerDeleted);
+
 
     return () => {
       console.log(`BoardViewPage (${boardId}): Cleaning up socket listeners.`);
-      socket.off("cursorMoved", handleCursorMoved);
-      // socket.off('userJoined', handleUserJoined);
-      // socket.off('userLeft', handleUserLeft);
-      socket.off("onlineUsers", handleOnlineUsers);
-      socket.off("userDrawingStatus", handleUserDrawingStatus);
-      // TODO: Clean up container socket listeners here
-    };
-  }, [socket, isConnected, hasAccess, boardId, user]); // Added dependencies
+      socket.off('cursorMoved', handleCursorMoved);
+      socket.off('onlineUsers', handleOnlineUsers);
+      socket.off('userDrawingStatus', handleUserDrawingStatus);
+      // Clean up new container listeners
+      socket.off('containerAdded', handleContainerAdded);
+      socket.off('containerUpdated', handleContainerUpdated);
+      socket.off('containerDeleted', handleContainerDeleted);
 
-  // Listen for clearBoardDrawing event from socket (DrawingCanvas also listens, but good to have here too)
+      // Cancel any pending debounced calls when the component unmounts or boardId changes
+      updateContainerApi.cancel();
+    };
+  }, [socket, isConnected, hasAccess, boardId, user, containers]); // Added 'containers' as dependency for handleContainerAdded check
+
+  // Listen for clearBoardDrawing event from socket (DrawingCanvas also listens)
   // This effect runs for both sample and real boards
   useEffect(() => {
-    if (!socket || !isConnected || !boardId || !user) return;
+    if (!socket || !isConnected || !boardId) return; // User not needed for this generic event
     const handleClear = (data: { boardId: string }) => {
       if (data.boardId !== boardId) return;
-      console.log(
-        `BoardViewPage (${boardId}): Received clearBoardDrawing event.`
-      );
-      // Note: DrawingCanvas handles clearing its own state.
-      // If we later store drawing strokes at the BoardViewPage level, this handler
-      // would need to update that state as well. For now, it just logs.
+       console.log(`BoardViewPage (${boardId}): Received clearBoardDrawing event.`);
+       // This event implies clearing both drawing and potentially containers?
+       // Based on the README, it seems specific to drawing. DrawingCanvas handles its state.
+       // If we add clearing containers, handle it here: setContainers([]);
     };
-    socket.on("clearBoardDrawing", handleClear);
+    socket.on('clearBoardDrawing', handleClear);
     return () => {
-      socket.off("clearBoardDrawing", handleClear);
+      socket.off('clearBoardDrawing', handleClear);
     };
-  }, [socket, isConnected, boardId, user]);
+  }, [socket, isConnected, boardId]); // Added boardId to dependencies
 
-  // Placeholder for mouse down/up on canvas area to send drawing status (optional, can be handled in DrawingCanvas)
-  // const handleMouseDown = () => {
-  //   if (socket && isConnected && boardId && user && hasAccess && isDrawingMode) {
-  //     socket.emit('userDrawingStatus', { boardId, isDrawing: true });
-  //   }
-  // };
 
-  // const handleMouseUp = () => {
-  //   if (socket && isConnected && boardId && user && hasAccess && isDrawingMode) {
-  //     socket.emit('userDrawingStatus', { boardId, isDrawing: false });
-  //   }
-  // };
-
-  // Loading state
+  // Loading state for initial fetch
   if (authLoading || boardLoading) {
     return (
       <div className="boardview-root-bg">
         <div className="boardview-header-card">
           <div className="boardview-header-left">
             <h2 className="boardview-title">Loading...</h2>
+            <p className="boardview-description">Fetching board data...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Error state (only applies to real boards)
+  // Error state (applies if boardError is set during fetch)
   if (boardError) {
     return (
       <div className="boardview-root-bg">
@@ -529,124 +664,89 @@ function BoardViewPage() {
           <div className="boardview-header-left">
             <h2 className="boardview-title">Error Loading Board</h2>
             <p className="boardview-description">{boardError}</p>
+             {/* TODO: Potentially render JoinPrivateBoardForm here if the error is "Access Denied" */}
+             {/* You would need to check if the board data (if available) is private */}
+             {/* For now, the error message itself should guide the user. */}
           </div>
         </div>
       </div>
     );
   }
 
-  // No access state (only applies to real private boards)
-  // For sample board, hasAccess is set to true immediately
-  if (!hasAccess) {
-    // This will be true for real private boards where user is not a member
-    // TODO: Implement JoinPrivateBoardForm rendering here
-    return (
-      <div className="boardview-root-bg">
-        <div className="boardview-header-card">
-          <div className="boardview-header-left">
-            <h2 className="boardview-title">Access Denied</h2>
-            <p className="boardview-description">
-              You don't have access to this board or it does not exist.
-            </p>
-            {/* TODO: Add JoinPrivateBoardForm here when implemented and needed */}
-            {/* <JoinPrivateBoardForm boardId={boardId || ''} onSuccessfulJoin={() => {}} /> */}
-          </div>
-        </div>
-      </div>
-    );
+  // No access state (should only be reached if board fetch succeeded but hasAccess is false,
+  // which is less likely with current backend that returns 403/404, but kept for robustness)
+   if (!hasAccess) {
+       console.warn(`BoardViewPage (${boardId}): hasAccess is false, but no boardError. This state might indicate a logic flaw or is for future use (e.g., public board with private content).`);
+       // This case is less likely with the backend returning 403/404 handled by boardError.
+       // However, if your backend design changes or for future features (e.g., password protected content),
+       // this block might be needed. For now, redirecting to Dashboard might be better UX.
+       // return <Navigate to="/dashboard" replace />; // Example: Redirect if somehow here without error/access
+       return (
+           <div className="boardview-root-bg">
+                <div className="boardview-header-card">
+                    <div className="boardview-header-left">
+                         <h2 className="boardview-title">Access Denied</h2>
+                         <p className="boardview-description">You do not have permission to view this board.</p>
+                         {/* TODO: Maybe render the JoinPrivateBoardForm here if appropriate */}
+                         {/* For example, if board && board.visibility === 'private' and user is NOT a member */}
+                    </div>
+                </div>
+           </div>
+       );
   }
 
-  // Main board view (rendered if hasAccess is true)
+
+  // Main board view (rendered if hasAccess is true and no boardError)
   return (
-    <div
-      className={`boardview-root-bg ${boardId === SAMPLE_BOARD_ID ? "sample-board-bg" : ""}`}
-    >
+    <div className={`boardview-root-bg ${boardId === SAMPLE_BOARD_ID ? 'sample-board-bg' : ''}`}>
       <div className="boardview-header-card">
         <div className="boardview-header-left">
           <h2 className="boardview-title">
             {board?.name}
             {/* Indicator for sample board */}
             {boardId === SAMPLE_BOARD_ID && (
-              <span
-                style={{
-                  marginLeft: "10px",
-                  fontSize: "1.1rem",
-                  color: "#605e5c",
-                  fontWeight: "normal",
-                }}
-              >
-                {" "}
-                (Sample)
-              </span>
+                 <span style={{ marginLeft: '10px', fontSize: '1.1rem', color: '#605e6c', fontWeight: 'normal' }}> (Sample)</span> /* Adjusted color slightly */
             )}
           </h2>
           {board?.description && (
             <p className="boardview-description">{board.description}</p>
           )}
-          {/* Display owner name for real boards (or sample user for sample) */}
-          <div style={{ marginTop: 8, fontSize: 14, color: "#555" }}>
-            <b>Owner:</b> {ownerName || board?.ownerId || "Loading..."}
+           {/* Display owner name for real boards (or sample user for sample) */}
+          <div style={{ marginTop: 8, fontSize: 14, color: '#555' }}>
+            <b>Owner:</b> {ownerName || board?.ownerId || 'Loading...'}
           </div>
-          {/* Display online users count and list for both types of boards */}
-          <div style={{ marginTop: 4, fontSize: 13, color: "#2563eb" }}>
-            <b>Online:</b> {onlineUsers.length}{" "}
-            {onlineUsers.length === 1 ? "user" : "users"}
-            <ul
-              style={{
-                margin: 0,
-                padding: 0,
-                listStyle: "none",
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-              }}
-            >
-              {onlineUsers.map((u) => (
-                <li
-                  key={u.userId}
-                  style={{ display: "flex", alignItems: "center", gap: 4 }}
-                >
-                  <span>{u.displayName}</span>
-                  {drawingUsers[u.userId] && (
-                    <span
-                      style={{ color: "#10b981", fontSize: 16 }}
-                      title={`${u.displayName} is drawing`}
-                    >
-                      ✏️
-                    </span>
-                  )}
-                  {board && u.userId === board.ownerId && (
-                    <span
-                      style={{ color: "#f59e42", fontSize: 14 }}
-                      title="Owner"
-                    >
-                      ★
-                    </span>
-                  )}
+           {/* Display online users count and list for both types of boards */}
+          <div style={{ marginTop: 4, fontSize: 13, color: '#2563eb' }}>
+            <b>Online:</b> {onlineUsers.length} {onlineUsers.length === 1 ? 'user' : 'users'}
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {onlineUsers.map(u => (
+                <li key={u.userId} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {/* Display user's own name as "You" or similar if desired */}
+                   {user && u.userId === user.uid ? <span style={{ fontWeight: 'bold' }}>You</span> : <span>{u.displayName || u.userId}</span>} {/* Other users by display name, fallback to UID */}
+
+                  {drawingUsers[u.userId] && <span style={{ color: '#10b981', fontSize: 16 }} title={`${u.displayName || u.userId} is drawing`}>✏️</span>}
+                  {board && u.userId === board.ownerId && <span style={{ color: '#f59e42', fontSize: 14 }} title="Owner">★</span>}
                 </li>
               ))}
             </ul>
           </div>
         </div>
         <div className="boardview-header-actions">
-          {/* Settings Button - Only shown for real boards */}
-          {boardId !== SAMPLE_BOARD_ID && (
+          {/* Settings Button - Only shown for real boards (not sample) AND if current user is owner */}
+          {boardId !== SAMPLE_BOARD_ID && board && user && board.ownerId === user.uid && (
             <button
               className="boardview-settings-btn"
               onClick={() => setShowSettingsModal(true)}
               title="Board Settings"
             >
-              <span role="img" aria-label="settings">
-                ⚙️
-              </span>
+              <span role="img" aria-label="settings">⚙️</span>
             </button>
           )}
-          {/* You might add other sample-specific actions here later, or general actions */}
         </div>
       </div>
 
-      {/* Board Settings Modal - Only show/open for real boards */}
-      {showSettingsModal && board && boardId !== SAMPLE_BOARD_ID && (
+      {/* Board Settings Modal - Only show/open for real boards and if current user is owner */}
+      {showSettingsModal && board && boardId !== SAMPLE_BOARD_ID && user && board.ownerId === user.uid && (
         <BoardSettingsModal
           boardId={board.id}
           isOpen={showSettingsModal}
@@ -654,109 +754,117 @@ function BoardViewPage() {
         />
       )}
 
-      {/* Canvas Area */}
+      {/* Canvas Area - Set width/height based on requirements */}
       <div
         ref={canvasRef}
-        className={`boardview-canvas-area ${isDrawingMode ? "drawing-mode" : ""}`}
-        // onMouseDown={handleMouseDown} // Handled by DrawingCanvas
-        // onMouseUp={handleMouseUp}   // Handled by DrawingCanvas
+        className={`boardview-canvas-area ${isDrawingMode ? 'drawing-mode' : ''}`}
+        // Mouse events for drawing/panning are handled by the DrawingCanvas component itself
       >
-        {/* Drawing Canvas - shown when in drawing mode */}
-        {isDrawingMode &&
-          boardId &&
-          user && ( // Ensure boardId and user exist for DrawingCanvas
-            <DrawingCanvas
-              boardId={boardId}
-              width={1200} // Fixed width for now, could make dynamic
-              height={600} // Fixed height for now, could make dynamic
-              className="drawing-canvas"
-            />
-          )}
+         {/* Drawing Canvas - shown when in drawing mode */}
+        {/* Render DrawingCanvas only if boardId exists, user exists (for emitting events), and isDrawingMode is true */}
+        {isDrawingMode && boardId && user && (
+          <DrawingCanvas
+            boardId={boardId}
+            width={1200} // Fixed width for now, could make dynamic
+            height={600} // Fixed height for now, could make dynamic
+            className="drawing-canvas"
+          />
+        )}
 
         {/* Cursor indicators */}
-        {/* Render cursors regardless of mode if enabled */}
-        {Object.entries(otherCursors).map(([userId, position]) => {
+        {/* Render cursors if user is logged in (needed for UID) and hasAccess */}
+        {user && hasAccess && Object.entries(otherCursors).map(([userId, position]) => {
+           // Don't render cursor for the current user (it's local)
+           if (userId === user.uid) return null;
+
           // Find the user's display name from the onlineUsers list
-          const userObj = onlineUsers.find((u) => u.userId === userId);
-          // Only show cursors for users who are currently marked as drawing? Or always?
-          // Let's show them always if we have their online status.
-          if (!userObj) return null; // Don't show cursor if user isn't in online list
-          // Calculate cursor position relative to the canvas area offset/scroll if any
-          // For now, assuming canvas area is top:0, left:0 relative to its container
+          const userObj = onlineUsers.find(u => u.userId === userId);
+          // Only show cursors for users who are currently marked as online
+          if (!userObj) return null;
+
+           // Calculate cursor position relative to the canvas area offset/scroll if any
+           // Assuming canvas area is positioned absolutely or relatively with no margin/padding impacting offset
           return (
-            <div
-              key={userId}
-              style={{
-                position: "absolute",
+            <div key={userId} style={{
+                position: 'absolute',
                 left: position.x,
                 top: position.y,
-                zIndex: 1000,
-                pointerEvents: "none", // Make it non-interactive
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-22px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "rgba(255,255,255,0.95)",
-                  color: "#2563eb",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  padding: "2px 8px",
-                  borderRadius: 6,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                  whiteSpace: "nowrap",
-                  pointerEvents: "none",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                {userObj?.displayName || userId}
+                zIndex: 1000, // Above containers/drawing
+                pointerEvents: 'none' // Make it non-interactive
+                }}>
+              {/* Cursor label */}
+              <div style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 2px)', // Position above the cursor dot
+                left: '50%', // Center above the dot
+                transform: 'translateX(-50%)',
+                background: 'rgba(255,255,255,0.95)',
+                color: '#2563eb',
+                fontWeight: 600,
+                fontSize: 12, // Slightly smaller font for label
+                padding: '1px 6px', // Smaller padding
+                borderRadius: 4, // Smaller radius
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                border: '1px solid #e5e7eb',
+                minWidth: '30px', /* Ensure label has some width */
+                textAlign: 'center',
+                zIndex: 1 /* Below the cursor dot visually if overlapping */
+              }}>
+                {userObj?.displayName || 'Guest'}
               </div>
+              {/* Cursor dot */}
               <div
                 className="other-user-cursor"
                 style={{
-                  width: "10px", // Smaller cursor dot
-                  height: "10px",
-                  backgroundColor: "#ff6b6b", // Example color
-                  borderRadius: "50%",
-                  pointerEvents: "none",
-                  transform: "translate(-50%, -50%)", // Center dot on mouse position
+                  width: '10px', // Cursor dot size
+                  height: '10px',
+                  backgroundColor: drawingUsers[userId] ? '#10b981' : '#ff6b6b', // Change color if user is drawing
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                  transform: 'translate(-50%, -50%)', // Center dot on the exact x,y
+                   zIndex: 2 /* Above the label visually */
                 }}
               />
             </div>
           );
         })}
 
+
         {/* Containers - shown when not in drawing mode */}
-        {/* Containers are currently managed via local state. Real boards will need this sync */}
-        {!isDrawingMode &&
-          containers.map((container) => (
-            <Container
-              key={container.id}
-              container={container}
-              onPositionChange={handleContainerPositionChange} // Uses local state for now
-              onSizeChange={handleContainerSizeChange} // Uses local state for now
-              onDelete={handleContainerDelete} // Uses local state for now
-              canvasBounds={{ width: 1200, height: 600 }} // Pass bounds if needed for dragging constraints
-            />
-          ))}
+        {/* Render containers only if boardId exists and isDrawingMode is false */}
+        {boardId && !isDrawingMode && containers.map(container => (
+          <Container
+            key={container.id}
+            container={container}
+            onPositionChange={handleContainerPositionChange} // Will trigger debounced API call for real boards
+            onSizeChange={handleContainerSizeChange}     // Will trigger debounced API call for real boards
+            onDelete={handleContainerDelete}           // Will trigger API call for real boards
+            canvasBounds={{ width: 1200, height: 600 }} // Pass bounds if needed for dragging constraints
+          />
+        ))}
 
         {/* Create Container Form Modal */}
-        {showCreateForm &&
-          boardId && ( // Ensure boardId exists
-            <div className="create-container-modal">
-              <div className="create-container-modal-content">
-                <h3>Create New Container</h3>
-                <CreateContainerForm
-                  boardId={boardId} // Pass the current boardId
-                  onCreateSuccess={handleCreateContainer} // Call local handler for now
-                  onCancel={() => setShowCreateForm(false)}
-                />
-              </div>
+        {/* Show modal only if requested and boardId exists */}
+        {showCreateForm && boardId && (
+          <div className="create-container-modal">
+            <div className="create-container-modal-content">
+              <h3>Create New Container</h3>
+              {/* Pass loading and error states down to the form */}
+              <CreateContainerForm
+                boardId={boardId} // Pass the current boardId
+                onCreateSuccess={handleCreateContainer} // Call handler, which now uses API for real boards
+                onCancel={() => {
+                    setShowCreateForm(false);
+                    setCreateContainerError(null); // Clear error when closing
+                }}
+                loading={isCreatingContainer} // Pass loading state for API call
+                error={createContainerError}  // Pass error state from API call
+              />
             </div>
-          )}
+          </div>
+        )}
 
         {/* Mode Toggle Button */}
         {/* Show mode toggle only if board and user exist */}
@@ -765,64 +873,61 @@ function BoardViewPage() {
             className="mode-toggle-btn"
             onClick={() => setIsDrawingMode(!isDrawingMode)}
             style={{
-              position: "absolute",
-              top: "20px",
-              right: "20px",
-              padding: "8px 16px",
-              borderRadius: "20px",
-              backgroundColor: isDrawingMode ? "#10b981" : "#2563eb",
-              color: "white",
-              border: "none",
-              fontSize: "14px",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              backgroundColor: isDrawingMode ? '#10b981' : '#2563eb',
+              color: 'white',
+              border: 'none',
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               zIndex: 100,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
-            title={
-              isDrawingMode
-                ? "Switch to Container Mode"
-                : "Switch to Drawing Mode"
-            }
+            title={isDrawingMode ? "Switch to Container Mode" : "Switch to Drawing Mode"}
           >
-            <span
-              role="img"
-              aria-label={isDrawingMode ? "container" : "drawing"}
-            >
+            <span role="img" aria-label={isDrawingMode ? "container" : "drawing"}>
               {isDrawingMode ? "📦" : "✏️"}
             </span>
             {isDrawingMode ? "Containers" : "Draw"}
           </button>
         )}
 
+
         {/* Add Container Button - only shown in container mode and if boardId/user exist */}
+        {/* Disable button while creating container */}
         {!isDrawingMode && boardId && user && (
           <button
             className="add-container-btn"
             onClick={() => setShowCreateForm(true)}
+            disabled={isCreatingContainer} // Disable while creating
             style={{
-              position: "absolute",
-              bottom: "20px",
-              right: "20px",
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              backgroundColor: "#2563eb",
-              color: "white",
-              border: "none",
-              fontSize: "24px",
-              cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+              position: 'absolute',
+              bottom: '20px',
+              right: '20px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              fontSize: '24px',
+              cursor: isCreatingContainer ? 'not-allowed' : 'pointer', // Change cursor
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
               zIndex: 100,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+               // Add disabled styles if needed
             }}
             title="Add Container"
           >
-            +
+            {isCreatingContainer ? '...' : '+'} {/* Show loading indicator in button */}
           </button>
         )}
       </div>
