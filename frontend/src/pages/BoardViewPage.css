@@ -1,29 +1,44 @@
-/* BoardViewPage.css */
-
+/* Basic layout */
 .boardview-root-bg {
   min-height: 100vh;
-  background: linear-gradient(120deg, #e0e7ff 0%, #f0f4ff 100%);
+  background: linear-gradient(
+    120deg,
+    #e0e7ff 0%,
+    #f0f4ff 100%
+  ); /* Default/Real board background */
   padding: 0;
   margin: 0;
+  padding-top: 32px; /* Space for the header card */
+  padding-bottom: 32px;
+}
+
+/* Style for the Sample Board background */
+.boardview-root-bg.sample-board-bg {
+  background: linear-gradient(
+    120deg,
+    #e0f2f7 0%,
+    #eef8fa 100%
+  ); /* Lighter blue/cyan for sample */
 }
 
 .boardview-header-card {
   max-width: 900px;
-  margin: 0 auto 32px auto;
+  margin: 0 auto 32px auto; /* Center and add space below */
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(79,140,255,0.13);
+  box-shadow: 0 4px 24px rgba(79, 140, 255, 0.13);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   padding: 32px 36px 24px 36px;
   position: relative;
-  top: 32px;
+  /* top: 32px; Remove top offset if adding padding-top to root */
   z-index: 2;
 }
 
 .boardview-header-left {
   flex: 1;
+  padding-right: 20px; /* Add some space before actions */
 }
 
 .boardview-title {
@@ -32,6 +47,7 @@
   color: #2563eb;
   margin: 0 0 8px 0;
   letter-spacing: -1px;
+  word-break: break-word; /* Prevent long titles from overflowing */
 }
 
 .boardview-description {
@@ -39,12 +55,14 @@
   color: #555;
   margin: 0 0 4px 0;
   font-weight: 400;
+  word-break: break-word;
 }
 
 .boardview-header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0; /* Prevent actions from shrinking */
 }
 
 .boardview-settings-btn {
@@ -59,30 +77,40 @@
   font-size: 1.5rem;
   color: #2563eb;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(79,140,255,0.10);
-  transition: background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(79, 140, 255, 0.1);
+  transition:
+    background 0.18s,
+    box-shadow 0.18s;
 }
 .boardview-settings-btn:hover {
   background: #e0e7ff;
-  box-shadow: 0 4px 16px rgba(79,140,255,0.16);
+  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.16);
 }
 
 .boardview-canvas-area {
-  position: relative;
+  position: relative; /* Needed for absolute positioning of containers and cursors */
   width: 100%;
-  min-height: 70vh;
+  min-height: 70vh; /* Ensure minimum height */
   max-width: 1200px;
-  margin: 0 auto;
-  background: #f8faff;
+  margin: 0 auto; /* Center the canvas area */
+  background: #f8faff; /* Default canvas background */
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(79,140,255,0.07);
-  padding: 32px 0 32px 0;
+  box-shadow: 0 2px 12px rgba(79, 140, 255, 0.07);
+  padding: 0; /* Remove padding from the canvas area itself */
   z-index: 1;
+  overflow: hidden; /* Hide anything outside the bounds */
 }
 
-.container-area {
-  padding: 20px;
-  min-height: 400px;
+/* Optional: Style for containers on sample board */
+/* Targets containers within the sample board background */
+.sample-board-bg .draggable-container {
+  border-color: #b2e0ee; /* Match the sample board theme */
+  box-shadow: 0 4px 12px rgba(178, 224, 238, 0.3);
+  margin: 0 auto 32px auto; /* Center and add space below */
+}
+
+.sample-board-bg .container-header {
+  background-color: rgba(255, 255, 255, 0.9);
 }
 
 /* Create Container Modal */
@@ -115,7 +143,7 @@
   font-weight: 600;
 }
 
-/* Form Styles */
+/* Form Styles (Apply to forms within modals/panels) */
 .create-container-form .form-group {
   margin-bottom: 16px;
 }
@@ -128,9 +156,10 @@
   font-weight: 500;
 }
 
-.create-container-form input,
+.create-container-form input[type="text"],
+.create-container-form input[type="url"],
 .create-container-form select {
-  width: 100%;
+  width: calc(100% - 24px); /* Adjust for padding */
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -138,7 +167,8 @@
   transition: border-color 0.2s;
 }
 
-.create-container-form input:focus,
+.create-container-form input[type="text"]:focus,
+.create-container-form input[type="url"]:focus,
 .create-container-form select:focus {
   outline: none;
   border-color: #2563eb;
@@ -146,35 +176,24 @@
 }
 
 /* Add Container Button Hover */
+.add-container-btn {
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
 .add-container-btn:hover {
-  background: #1d4ed8 !important;
+  background: #1d4ed8 !important; /* Darker blue */
   transform: scale(1.05);
-  transition: all 0.2s ease;
-}
-
-/* Drawing Canvas Styles */
-.drawing-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-}
-
-/* Container Drawing Canvas */
-.container-drawing-canvas {
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  cursor: crosshair;
-  background-color: white;
-  width: 100%;
-  height: 100%;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
 /* Mode Toggle Button */
 .mode-toggle-btn {
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .mode-toggle-btn:hover {
@@ -198,13 +217,14 @@
   backdrop-filter: blur(10px);
 }
 
-/* Canvas Area when in drawing mode */
+/* Canvas Area when in drawing mode - add a grid pattern */
 .boardview-canvas-area.drawing-mode {
-  background-color: #f8fafc;
-  background-image: 
-    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-color: #f8fafc; /* Slightly different background */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    /* Horizontal lines */
+      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px); /* Vertical lines */
+  background-size: 20px 20px; /* Size of the grid cells */
 }
 
 /* Custom scrollbar for container content */
@@ -222,4 +242,16 @@
 }
 .container-content::-webkit-scrollbar-thumb:hover {
   background: #b6bbc4;
-} 
+}
+
+/* Style for the resize handle to be more visible */
+.resize-handle {
+  width: 15px !important; /* Smaller handle */
+  height: 15px !important; /* Smaller handle */
+  background: rgba(0, 0, 0, 0.1) !important; /* Make it slightly visible */
+  border-bottom-right-radius: 10px; /* Match container corner */
+  transition: background 0.2s ease;
+}
+.resize-handle:hover {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
