@@ -1,4 +1,3 @@
-// frontend/src/components/Board/CreateContainerForm.tsx
 import React, { useState } from 'react';
 // Import ContainerPurpose type
 import type { ContainerPurpose } from '../../../../shared/types';
@@ -8,7 +7,7 @@ interface CreateContainerFormProps {
   // Updated signature to pass form data object
   onCreateSuccess?: (formData: { title: string; purpose: ContainerPurpose }) => void;
   onCancel?: () => void;
-  // Added loading and error props for API call feedback (Fixes the TS error)
+  // Added loading and error props for API call feedback
   loading?: boolean;
   error?: string | null;
 }
