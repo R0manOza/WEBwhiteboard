@@ -1,3 +1,4 @@
+/* App.css */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -8,10 +9,13 @@ body {
   background-color: #f3f2f1; /* Teams-like light background */
   color: #323130; /* Teams-like dark text */
   line-height: 1.5;
+  min-height: 100vh; /* Ensure body covers at least the viewport height */
+  display: flex; /* Make body a flex container */
+  flex-direction: column; /* Stack children vertically */
 }
 
 #root { /* Vite's root element */
-    min-height: 100vh;
+    flex-grow: 1; /* Allow root to fill available space */
     display: flex;
     flex-direction: column;
 }
@@ -19,125 +23,146 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
+  flex-grow: 1; /* Allow container to fill available space */
 }
 
 /* --- Navigation Bar Styles --- */
 nav {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.5rem; /* Increased horizontal padding */
   background-color: #ffffff;
   border-bottom: 1px solid #e1dfdd;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 
-  /* --- Flexbox for Main Layout --- */
-  display: flex; /* Make the nav a flex container */
-  justify-content: space-between; /* Pushes .nav-left to the start, .nav-right to the end */
-  align-items: center; /* Vertically centers content within the nav */
-  width: 100%; /* Ensure nav takes full width */
-  box-sizing: border-box; /* Include padding/border in width calculation */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0; /* Prevent nav from shrinking */
 }
 
-/* --- Styles for Left and Right Sections within Nav --- */
 .nav-left,
 .nav-right {
-    display: flex; /* Make these containers flex containers too to align items within them */
-    align-items: center; /* Vertically center items */
-    /* Use gap for spacing *between* items within these sections */
-    gap: 1rem; /* Add space between elements in the left/right nav sections */
+    display: flex;
+    align-items: center;
+    gap: 1.5rem; /* Increased gap */
 }
 
 /* General style for Link components within the nav */
 nav a.nav-link {
-  /* Removed margin-right here because gap on .nav-left/.nav-right handles spacing */
   text-decoration: none;
-  color: #0078d4;
+  color: #0078d4; /* Microsoft Teams blue */
   font-weight: 500;
-  white-space: nowrap; /* Prevent links from wrapping */
+  white-space: nowrap;
+  padding: 0.25rem 0; /* Add subtle vertical padding for hit area */
+  transition: color 0.2s ease, border-bottom-color 0.2s ease; /* Add transition */
+  border-bottom: 2px solid transparent; /* Add transparent border for hover effect */
 }
 
 nav a.nav-link:hover {
-  text-decoration: underline;
+  color: #005a9e; /* Darker blue on hover */
+  text-decoration: none; /* Remove underline on hover if using border */
+  border-bottom-color: #005a9e; /* Highlight with border on hover */
 }
+
+/* Optional: Style for active link */
+/* Requires using NavLink and checking isActive */
+/* nav a.nav-link.active {
+   font-weight: 600;
+   border-bottom-color: #0078d4;
+} */
 
 
 /* --- Styles for Logged-in User Info Section (in .nav-right) --- */
 .user-info {
-  display: flex; /* Arrange picture, name, and sign-out button side-by-side */
-  align-items: center; /* Vertically center items */
-  gap: 0.5rem; /* Space between items in the user info block */
-  font-size: 0.9rem;
-  color: #323130; /* Text color */
-   white-space: nowrap; /* Prevent user info block from wrapping */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Increased gap */
+  font-size: 0.95rem; /* Slightly larger font */
+  color: #323130;
+  white-space: nowrap;
 }
 
 .user-avatar {
-  width: 24px; /* Size for avatar */
-  height: 24px;
-  border-radius: 50%; /* Make it round */
-  object-fit: cover; /* Ensure image covers the area */
-  border: 1px solid #e1dfdd; /* Subtle border */
-  flex-shrink: 0; /* Prevent avatar from shrinking */
+  width: 32px; /* Larger avatar */
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e1dfdd;
+  flex-shrink: 0;
+  background-color: #d1d5db; /* Placeholder background */
 }
 
 .user-name {
   font-weight: 600;
-   /* text-overflow: ellipsis; Hide overflow with ellipsis if name is too long */
-   /* overflow: hidden; */
-   /* max-width: 100px; Set max width if needed */
 }
 
-/* Style for the Sign Out button (in .nav-right, likely within or next to .user-info) */
-button.sign-out-button { /* Targeting button specifically with the class */
-    background: none; /* Remove default button background */
-    border: none; /* Remove default button border */
-    color: #0078d4; /* Use brand color */
+/* Style for the Sign Out button (in .nav-right) */
+button.sign-out-button {
+    background: none;
+    border: none;
+    color: #0078d4;
     cursor: pointer;
-    font-size: 0.9rem;
-    padding: 0; /* Remove default padding */
-    text-decoration: underline; /* Make it look like a link */
-    white-space: nowrap; /* Prevent button text from wrapping */
+    font-size: 0.95rem;
+    padding: 0;
+    text-decoration: underline; /* Keep underline to look like a link */
+    white-space: nowrap;
+    transition: color 0.2s ease;
 }
 
 button.sign-out-button:hover {
-    color: #005a9e; /* Darker blue on hover */
+    color: #005a9e;
+    text-decoration: underline;
 }
 
-
-/* Style for loading text in nav (in .nav-right) */
-span.nav-status { /* Targeting span specifically with the class */
-    font-size: 0.9rem;
-    color: #605e5c; /* Muted color */
-     white-space: nowrap; /* Prevent text from wrapping */
-}
 
 /* --- Page Content Styles --- */
 .page-content {
-  flex-grow: 1; /* Allows content area to take up remaining vertical space */
-  padding: 1rem;
+  flex-grow: 1;
+  padding: 1rem; /* Keep default padding, pages can override */
+  background-color: #f3f2f1; /* Match body background */
 }
 
-/* --- Basic Button Styles (Optional) --- */
-/* Add general button styles if needed, but sign-out-button is styled above */
-button {
-    /* Basic button styles */
-    padding: 0.5rem 1rem;
+/* Base style for page content areas */
+.page {
+    /* Individual pages can add specific padding/margins */
+}
+
+/* --- Basic Button Styles --- */
+/* Standardize default button look */
+button:not(.sign-out-button):not(.boardview-settings-btn):not(.mode-toggle-btn):not(.add-container-btn) {
+    padding: 0.6rem 1.2rem; /* Adjusted padding */
     border: 1px solid #0078d4;
     background-color: #0078d4;
     color: #fff;
-    border-radius: 4px;
+    border-radius: 4px; /* Slightly smaller radius */
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    line-height: 1; /* Ensure button text is vertically centered */
+    display: inline-flex; /* Use flex to center content if needed */
+    align-items: center; /* Vertically center content */
+    justify-content: center; /* Horizontally center content */
 }
 
-button:hover:not(:disabled) {
+button:not(.sign-out-button):not(.boardview-settings-btn):not(.mode-toggle-btn):not(.add-container-btn):hover:not(:disabled) {
     background-color: #005a9e;
     border-color: #005a9e;
 }
 
-button:disabled {
-    opacity: 0.6;
+button:not(.sign-out-button):disabled {
+    opacity: 0.5; /* Reduced opacity for disabled */
     cursor: not-allowed;
+}
+
+/* Style for secondary buttons (e.g., Cancel) */
+button.secondary {
+    background-color: #e1dfdd;
+    color: #323130;
+    border-color: #e1dfdd;
+}
+button.secondary:hover:not(:disabled) {
+    background-color: #d1d5db;
+    border-color: #d1d5db;
 }

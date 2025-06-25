@@ -1,11 +1,9 @@
+/* BoardViewPage.css */
+
 /* Basic layout */
 .boardview-root-bg {
   min-height: 100vh;
-  background: linear-gradient(
-    120deg,
-    #e0e7ff 0%,
-    #f0f4ff 100%
-  ); /* Default/Real board background */
+  background: linear-gradient(120deg, #e0e7ff 0%, #f0f4ff 100%); /* Default/Real board background */
   padding: 0;
   margin: 0;
   padding-top: 32px; /* Space for the header card */
@@ -14,26 +12,23 @@
 
 /* Style for the Sample Board background */
 .boardview-root-bg.sample-board-bg {
-  background: linear-gradient(
-    120deg,
-    #e0f2f7 0%,
-    #eef8fa 100%
-  ); /* Lighter blue/cyan for sample */
+    background: linear-gradient(120deg, #e0f2f7 0%, #eef8fa 100%); /* Lighter blue/cyan for sample */
 }
+
 
 .boardview-header-card {
   max-width: 900px;
   margin: 0 auto 32px auto; /* Center and add space below */
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(79, 140, 255, 0.13);
+  box-shadow: 0 4px 24px rgba(79,140,255,0.13);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   padding: 32px 36px 24px 36px;
   position: relative;
-  /* top: 32px; Remove top offset if adding padding-top to root */
   z-index: 2;
+  border: 1px solid #d1d5db; /* Add light border */
 }
 
 .boardview-header-left {
@@ -77,14 +72,12 @@
   font-size: 1.5rem;
   color: #2563eb;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(79, 140, 255, 0.1);
-  transition:
-    background 0.18s,
-    box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.10);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 .boardview-settings-btn:hover {
   background: #e0e7ff;
-  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(79,140,255,0.16);
 }
 
 .boardview-canvas-area {
@@ -95,7 +88,7 @@
   margin: 0 auto; /* Center the canvas area */
   background: #f8faff; /* Default canvas background */
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(79, 140, 255, 0.07);
+  box-shadow: 0 2px 12px rgba(79,140,255,0.07);
   padding: 0; /* Remove padding from the canvas area itself */
   z-index: 1;
   overflow: hidden; /* Hide anything outside the bounds */
@@ -104,67 +97,71 @@
 /* Optional: Style for containers on sample board */
 /* Targets containers within the sample board background */
 .sample-board-bg .draggable-container {
-  border-color: #b2e0ee; /* Match the sample board theme */
-  box-shadow: 0 4px 12px rgba(178, 224, 238, 0.3);
-  margin: 0 auto 32px auto; /* Center and add space below */
+    border-color: #b2e0ee; /* Match the sample board theme */
+    box-shadow: 0 4px 12px rgba(178,224,238,0.3);
 }
 
 .sample-board-bg .container-header {
-  background-color: rgba(255, 255, 255, 0.9);
+     background-color: rgba(255, 255, 255, 0.9);
 }
 
-/* Create Container Modal */
-.create-container-modal {
+
+/* Create Container Modal (reusing modal-overlay and modal-form concepts) */
+/* Using specific class names defined in the component */
+.create-container-modal { /* This acts as the modal-overlay */
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4); /* Consistent overlay */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
+   padding: 1rem; /* Add padding for small screens */
 }
 
-.create-container-modal-content {
+.create-container-modal-content { /* This acts as the modal-form */
   background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  min-width: 400px;
-  max-width: 500px;
+  padding: 1.5rem; /* Adjusted padding */
+  border-radius: 8px; /* Consistent radius */
+  min-width: 320px;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15); /* Consistent shadow */
+   width: 100%;
+   box-sizing: border-box;
 }
 
-.create-container-modal-content h3 {
-  margin: 0 0 20px 0;
+.create-container-modal-content h3 { /* Consistent title style */
+  margin-top: 0;
+  margin-bottom: 1.5rem;
   color: #1f2937;
-  font-size: 18px;
+  font-size: 1.5rem;
   font-weight: 600;
 }
 
-/* Form Styles (Apply to forms within modals/panels) */
-.create-container-form .form-group {
-  margin-bottom: 16px;
+/* Form Styles within Create Container Modal */
+.create-container-form .form-group { /* Consistent form group spacing */
+  margin-bottom: 1rem;
 }
 
-.create-container-form label {
+.create-container-form label { /* Consistent label style */
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 0.5rem;
   color: #374151;
-  font-size: 14px;
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
+/* Consistent input/select styles */
 .create-container-form input[type="text"],
 .create-container-form input[type="url"],
 .create-container-form select {
-  width: calc(100% - 24px); /* Adjust for padding */
-  padding: 8px 12px;
+  width: 100%;
+  padding: 0.6rem 0.8rem; /* Adjusted padding */
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.2s;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .create-container-form input[type="text"]:focus,
@@ -172,21 +169,48 @@
 .create-container-form select:focus {
   outline: none;
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
+
+/* Consistent form actions/button layout */
+.create-container-form .form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+.create-container-form button[type="submit"] { /* Primary button */
+   /* Inherits base button style from App.css */
+}
+.create-container-form button[type="button"] { /* Cancel button */
+   /* Inherits base button style from App.css */
+   background-color: #fff;
+   color: #323130;
+   border-color: #d1d5db;
+}
+.create-container-form button[type="button"]:hover:not(:disabled) {
+   background-color: #f3f2f1;
+   border-color: #c8c6c4;
+}
+
 
 /* Add Container Button Hover */
 .add-container-btn {
-  transition:
-    transform 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  /* Inherits base button visual properties */
 }
-.add-container-btn:hover {
+.add-container-btn:hover:not(:disabled) { /* Add :not(:disabled) */
   background: #1d4ed8 !important; /* Darker blue */
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
+.add-container-btn:disabled { /* Style for disabled state */
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none; /* Remove shadow when disabled */
+    transform: none; /* Remove transform when disabled */
+}
+
 
 /* Mode Toggle Button */
 .mode-toggle-btn {
@@ -194,14 +218,20 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Inherits base button visual properties */
 }
 
-.mode-toggle-btn:hover {
+.mode-toggle-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+.mode-toggle-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
-/* Drawing Tools */
+
+/* Drawing Tools (Positioned absolute, should already be z-index 1000) */
 .drawing-tools {
   position: absolute;
   top: 10px;
@@ -215,15 +245,90 @@
   align-items: center;
   z-index: 1000;
   backdrop-filter: blur(10px);
+  border: 1px solid #e1dfdd; /* Add a light border */
 }
+/* Style individual controls within drawing tools */
+.drawing-tools input[type="color"] {
+    border: 1px solid #d1d5db; /* Add border to color picker */
+    border-radius: 4px;
+    padding: 2px; /* Space inside border */
+    background: #fff; /* Ensure white background */
+    cursor: pointer;
+}
+.drawing-tools input[type="range"] {
+    /* Default browser styles vary, could style further */
+    cursor: pointer;
+}
+.drawing-tools button { /* Style buttons within drawing tools */
+    /* Inherit base button styles, or override specific ones */
+    padding: 6px 12px; /* Smaller padding for tool buttons */
+    font-size: 12px; /* Smaller font */
+    font-weight: 500;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px; /* Space for icons */
+    border-radius: 4px;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.drawing-tools button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+.drawing-tools button:disabled {
+     opacity: 0.4;
+     cursor: not-allowed;
+}
+
+/* Style Clear/Undo buttons specifically */
+.drawing-tools button:nth-of-type(1) { /* Undo */
+    background-color: #ffc107; /* Yellow/Orange */
+    border-color: #ffc107;
+    color: #222;
+}
+.drawing-tools button:nth-of-type(1):hover:not(:disabled) {
+    background-color: #ffb300;
+    border-color: #ffb300;
+}
+.drawing-tools button:nth-of-type(2) { /* Clear */
+    background-color: #e53935; /* Red */
+    border-color: #e53935;
+    color: #fff;
+}
+.drawing-tools button:nth-of-type(2):hover:not(:disabled) {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+}
+/* Style Pan/Zoom buttons */
+.drawing-tools button:nth-of-type(3), /* Pan */
+.drawing-tools button:nth-of-type(4), /* Zoom In */
+.drawing-tools button:nth-of-type(5) { /* Zoom Out */
+    background-color: #e1dfdd; /* Light grey */
+    border-color: #d1d5db;
+    color: #323130;
+    font-weight: 600;
+    font-size: 14px; /* Slightly larger icon buttons */
+    padding: 8px; /* Square buttons */
+}
+.drawing-tools button:nth-of-type(3).active { /* Active Pan button */
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+.drawing-tools button:nth-of-type(3):hover:not(:disabled),
+.drawing-tools button:nth-of-type(4):hover:not(:disabled),
+.drawing-tools button:nth-of-type(5):hover:not(:disabled) {
+    background-color: #c8c6c4;
+    border-color: #b6bbc4;
+}
+
 
 /* Canvas Area when in drawing mode - add a grid pattern */
 .boardview-canvas-area.drawing-mode {
   background-color: #f8fafc; /* Slightly different background */
   background-image:
-    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-    /* Horizontal lines */
-      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px); /* Vertical lines */
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px), /* Horizontal lines */
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px); /* Vertical lines */
   background-size: 20px 20px; /* Size of the grid cells */
 }
 
@@ -246,12 +351,283 @@
 
 /* Style for the resize handle to be more visible */
 .resize-handle {
-  width: 15px !important; /* Smaller handle */
-  height: 15px !important; /* Smaller handle */
-  background: rgba(0, 0, 0, 0.1) !important; /* Make it slightly visible */
-  border-bottom-right-radius: 10px; /* Match container corner */
-  transition: background 0.2s ease;
+    width: 15px !important; /* Smaller handle */
+    height: 15px !important; /* Smaller handle */
+    background: rgba(0, 0, 0, 0.1) !important; /* Make it slightly visible */
+    border-bottom-right-radius: 8px; /* Match container corner radius */
+    transition: background 0.2s ease;
 }
 .resize-handle:hover {
-  background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+}
+
+
+/* Style for other user cursors */
+.other-user-cursor {
+    width: 10px; /* Cursor dot size */
+    height: 10px;
+    /* Background color is set inline based on drawing status */
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%); /* Center dot on the exact x,y */
+    z-index: 2; /* Above the label visually */
+    /* Add a pulse animation */
+    animation: pulse 1s infinite alternate ease-in-out; /* Softer animation */
+    border: 1px solid rgba(255,255,255,0.8); /* Add white border for visibility */
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9); /* Start slightly smaller */
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1); /* End slightly larger */
+    opacity: 1;
+  }
+}
+
+/* Container Component Basic Styling (apply to the main container div) */
+/* Note: Many styles are still inline in Container.tsx, move them here for consistency */
+.draggable-container {
+    position: absolute;
+    background-color: #fff; /* Default background, purpose-specific override */
+    border: 1px solid #d1d5db; /* Light border */
+    border-radius: 8px; /* Consistent radius */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+     /* z-index is set inline based on dragging */
+}
+.draggable-container:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* More prominent shadow on hover */
+}
+.draggable-container.dragging { /* Class added while dragging */
+    cursor: grabbing;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+
+/* Container Header Styling */
+.container-header {
+    padding: 0.75rem 1rem; /* Consistent padding */
+    background-color: #f3f4f6; /* Light grey header background */
+    border-bottom: 1px solid #e1dfdd; /* Separator */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: grab;
+    flex-shrink: 0; /* Prevent header from shrinking */
+    gap: 0.5rem; /* Space inside header */
+}
+.container-header h3 {
+    margin: 0;
+    font-size: 1rem; /* Standard font size */
+    font-weight: 600;
+    color: #1f2937;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Container Content Area */
+.container-content {
+    flex: 1; /* Allows content to fill height */
+    padding: 1rem; /* Consistent padding */
+    overflow-y: auto;
+    overflow-x: hidden;
+     /* Max height for scrolling is often set inline or by parent size */
+    background-color: transparent; /* Match container background */
+}
+
+/* Styles for elements INSIDE container content */
+/* Notes container textarea */
+.container-content textarea {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    resize: none;
+    font-size: 0.95rem; /* Consistent font size */
+    line-height: 1.6;
+    color: #374151;
+    font-family: inherit;
+    padding: 0; /* Remove padding */
+    box-sizing: border-box;
+}
+
+/* Links container link form */
+.container-content .links-form { /* Add this class to the links form div */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* Space between form elements */
+    margin-bottom: 1rem; /* Space below form */
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e1dfdd; /* Separator below form */
+}
+.container-content .links-form input[type="url"],
+.container-content .links-form input[type="text"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+.container-content .links-form input:focus {
+     outline: none;
+     border-color: #2563eb;
+     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.container-content .links-form button { /* Add Link button */
+    /* Inherit base button styles, override specifics */
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+     transition: background-color 0.2s ease;
+}
+.container-content .links-form button:hover:not(:disabled) {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+
+/* Links List */
+.container-content .links-list { /* Add this class to the links list div */
+    font-size: 0.9rem;
+}
+.container-content .links-list > div { /* Individual link item */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f4f6; /* Very light separator */
+}
+.container-content .links-list > div:last-child {
+     border-bottom: none; /* No border on last item */
+     padding-bottom: 0;
+}
+
+.container-content .links-list a {
+    color: #0078d4; /* Teams blue */
+    text-decoration: none;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+.container-content .links-list a:hover {
+    text-decoration: underline;
+}
+.container-content .links-list button { /* Delete link button */
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ef4444; /* Danger color */
+    font-size: 0.8rem; /* Smaller font */
+    padding: 2px;
+    transition: color 0.2s ease;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+.container-content .links-list button:hover {
+    color: #dc2626;
+}
+
+.container-content .empty-links-message { /* Style for "No links yet" */
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 20px 0;
+}
+
+
+/* Drawing Canvas Styles */
+.drawing-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10; /* Above containers in container mode, but below cursors/tools */
+  /* Removed border/radius/background from here as they are often on the parent area */
+}
+
+/* Container Drawing Canvas (within Container.tsx) */
+/* This class is applied to the canvas *inside* the container */
+.container-drawing-canvas {
+  border: 1px solid #e5e7eb; /* Border *inside* the container */
+  border-radius: 4px;
+  cursor: crosshair;
+  background-color: white;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box; /* Ensure border doesn't add to size */
+}
+
+
+/* Add Container Button */
+.add-container-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 56px; /* Slightly smaller */
+  height: 56px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  font-size: 28px; /* Larger plus sign */
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  z-index: 100; /* Ensure it's visible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* Center the plus sign */
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+    .boardview-header-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 24px;
+    }
+    .boardview-header-left {
+        padding-right: 0;
+        margin-bottom: 20px;
+    }
+    .boardview-header-actions {
+        justify-content: flex-end; /* Align buttons right */
+    }
+    .drawing-tools {
+        flex-wrap: wrap;
+        justify-content: center;
+        top: auto;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+    .drawing-tools button {
+        flex-grow: 1; /* Allow buttons to grow */
+        justify-content: center;
+    }
+     .mode-toggle-btn {
+         position: static; /* Remove absolute positioning in header */
+     }
+
 }
