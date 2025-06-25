@@ -65,13 +65,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       y: (y - viewport.offsetY) / viewport.scale
     };
   };
-  // Convert world coords to screen (canvas) coords
-  const worldToScreen = (x: number, y: number) => {
-    return {
-      x: x * viewport.scale + viewport.offsetX,
-      y: y * viewport.scale + viewport.offsetY
-    };
-  };
+  // // Convert world coords to screen (canvas) coords
+  // const worldToScreen = (x: number, y: number) => {
+  //   return {
+  //     x: x * viewport.scale + viewport.offsetX,
+  //     y: y * viewport.scale + viewport.offsetY
+  //   };
+  // };
 
   // Generate unique stroke ID
   const generateStrokeId = () => `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -551,6 +551,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   };
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isPanningRef.current) {
+      console.log(e);
       isPanningRef.current = false;
       return;
     }
