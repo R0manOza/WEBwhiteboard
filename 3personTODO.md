@@ -546,8 +546,8 @@ Build a multi-user, real-time collaborative web application where users can orga
   };
   ```
 
-- [ ] **Day 2**: Implement drag-and-drop with react-draggable
-- [ ] **Day 3**: Implement resizing with react-resizable-box
+- [x] **Day 2**: Implement drag-and-drop with react-draggable
+- [x] **Day 3**: Implement resizing with react-resizable-box
 - [x] **Day 4**: Create container creation UI (floating menu or sidebar)
 
 **Required Libraries:**
@@ -625,7 +625,7 @@ npm install react-draggable react-resizable
 **Primary Focus**: Rich editing interface for both item types
 
 **Tasks:**
-- [ ] **Day 1**: Create NoteItem component
+- [x] **Day 1**: Create NoteItem component
   ```typescript
   // src/components/Items/NoteItem.tsx
   export const NoteItem = ({ item, onUpdate, onDelete }) => {
@@ -656,7 +656,7 @@ npm install react-draggable react-resizable
   };
   ```
 
-- [ ] **Day 2**: Create LinkItem component with URL validation and preview
+- [x] **Day 2**: Create LinkItem component with URL validation and preview
   ```typescript
   // src/components/Items/LinkItem.tsx
   export const LinkItem = ({ item, onUpdate, onDelete }) => {
@@ -673,8 +673,8 @@ npm install react-draggable react-resizable
   };
   ```
 
-- [ ] **Day 3**: Create item creation forms (Add Note/Add Link modals)
-- [ ] **Day 4**: Implement auto-save functionality with debouncing
+- [x] **Day 3**: Create item creation forms (Add Note/Add Link modals)
+- [x] **Day 4**: Implement auto-save functionality with debouncing
 
 ### Developer C - Items Integration & Search (Day 5)
 **Primary Focus**: Real-time item synchronization and container-level search
@@ -722,8 +722,8 @@ npm install react-draggable react-resizable
 
 ### Developer B - Board Management UI (Days 1-3)
 **Tasks:**
-- [ ] **Day 1**: Create board settings modal
-- [ ] **Day 2**: Create private board join interface with password input
+- [x] **Day 1**: Create board settings modal
+- [x] **Day 2**: Create private board join interface with password input
 - [ ] **Day 3**: Add member management UI (invite/remove members)
 
 ### Developer C - Permissions & Security Review (Days 4-5)
