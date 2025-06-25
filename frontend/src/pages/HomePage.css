@@ -1,0 +1,80 @@
+/* frontend/src/pages/HomePage.css */
+
+/* Define the animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0; /* Start completely invisible */
+    transform: translateY(20px); /* Start 20px below the final position */
+  }
+  to {
+    opacity: 1; /* End fully visible */
+    transform: translateY(0); /* End at the final position */
+  }
+}
+
+
+/* Target the specific class added to the page div */
+.page.home-page {
+  /* Remove default page padding from App.css if you want custom layout */
+  /* padding: 0; */
+
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center content horizontally */
+  justify-content: center; /* Center content vertically */
+  /* Take full viewport height minus nav height. Adjust var() if needed. */
+  min-height: calc(100vh - var(--nav-height, 60px));
+  text-align: center; /* Center text */
+
+  /* Background Color */
+  background-color: #e0f2f7; /* A light bluish color */
+  /* background: linear-gradient(120deg, #e0f2f7 0%, #eef8fa 100%); */
+
+
+  padding: 2rem 1rem; /* Add some padding */
+  box-sizing: border-box; /* Include padding in size */
+}
+
+/* Apply the animation to the heading */
+.home-page h1 {
+  font-size: 3rem; /* Larger heading */
+  color: #1f2937; /* Darker text for heading */
+  margin-bottom: 1rem; /* Space below heading */
+
+  /* --- Animation Properties --- */
+  animation-name: fadeInUp; /* The name of the @keyframes we defined */
+  animation-duration: 0.8s; /* How long the animation takes */
+  animation-timing-function: ease-out; /* Speed curve */
+  animation-fill-mode: forwards; /* Keep the end state (opacity: 1) */
+  animation-delay: 0s; /* Start immediately */
+  opacity: 0; /* Ensure it starts invisible before the animation */
+  /* --- End Animation Properties --- */
+}
+
+/* Apply the animation to the paragraph, with a slight delay */
+.home-page p {
+  font-size: 1.2rem; /* Slightly larger paragraph text */
+  color: #374151; /* Darker text for paragraph */
+  max-width: 600px; /* Limit paragraph width for readability */
+  line-height: 1.6;
+
+  /* --- Animation Properties --- */
+  animation-name: fadeInUp; /* Use the same animation */
+  animation-duration: 0.8s; /* Same duration */
+  animation-timing-function: ease-out; /* Same speed curve */
+  animation-fill-mode: forwards; /* Keep the end state */
+  animation-delay: 0.3s; /* Start 0.3 seconds after the H1 animation begins */
+  opacity: 0; /* Ensure it starts invisible before the animation */
+  /* --- End Animation Properties --- */
+}
+
+
+/* Optional: Style for any links you might add later */
+.home-page a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.home-page a:hover {
+    text-decoration: underline;
+}

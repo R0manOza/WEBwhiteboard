@@ -38,7 +38,6 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
-
 // --- Create a separate Navigation Component ---
 // This component will use the useAuth hook to conditionally render content and structure the nav layout.
 const AppNav = () => {
@@ -59,25 +58,23 @@ const AppNav = () => {
           Home
         </Link>{" "}
         {/* Add class for styling */}
-
         {/* Dashboard Link (Conditional) */}
         {isAuthenticated && ( // <-- Shows Dashboard when logged in
           <Link to="/dashboard" className="nav-link">
             Dashboard
           </Link>
         )}
-
         {/* --- START: BoardView Link (Conditional Placeholder) --- */}
         {isAuthenticated && ( // <-- Shows Board View link when logged in
-           // NOTE: This is a placeholder linking to a hardcoded ID.
-           // In a real app, you'd list actual boards here, likely fetched from the backend.
-          <Link to="/board/sample-board-id-123" className="nav-link">
+          // NOTE: This is a placeholder linking to a hardcoded ID.
+          // In a real app, you'd list actual boards here, likely fetched from the backend.
+          <Link to="/board/sample-solo-board" className="nav-link">
+            {" "}
+            {/* Use the constant ID */}
             Sample Board
           </Link>
         )}
         {/* --- END: BoardView Link (Conditional Placeholder) --- */}
-
-
       </div>
 
       {/* --- Right-aligned section (Login link OR User Info) --- */}
@@ -100,7 +97,10 @@ const AppNav = () => {
               />
             )}
             {/* Display username - use displayName from the user object */}
-            <span className="user-name">{user.displayName || user.email || 'User'}</span> {/* Use displayName, fallback to email, then 'User' */}
+            <span className="user-name">
+              {user.displayName || user.email || "User"}
+            </span>{" "}
+            {/* Use displayName, fallback to email, then 'User' */}
             {/* --- Add Sign Out Button --- */}
             {/* This button already calls your logout function */}
             <button onClick={logout} className="sign-out-button">
@@ -138,24 +138,30 @@ function App() {
               {/* --- Protected Routes --- */}
               {/* Wrap routes that require authentication with the ProtectedRoute component */}
 
-               {/* Dashboard is now protected */}
-               <Route
-                 path="/dashboard"
-                 element={
-                    <ProtectedRoute> {/* This component handles auth check */}
-                       <DashboardPage /> {/* This is the component rendered if authenticated */}
-                    </ProtectedRoute>
-                 }
-               />
-                {/* BoardView is now protected - the :boardId is a URL parameter */}
-                <Route
-                 path="/board/:boardId" // Matches URLs like /board/abc-123
-                 element={
-                    <ProtectedRoute> {/* This component handles auth check */}
-                       <BoardViewPage /> {/* This is the component rendered if authenticated */}
-                    </ProtectedRoute>
-                 }
-               />
+              {/* Dashboard is now protected */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    {" "}
+                    {/* This component handles auth check */}
+                    <DashboardPage />{" "}
+                    {/* This is the component rendered if authenticated */}
+                  </ProtectedRoute>
+                }
+              />
+              {/* BoardView is now protected - the :boardId is a URL parameter */}
+              <Route
+                path="/board/:boardId" // Matches URLs like /board/abc-123
+                element={
+                  <ProtectedRoute>
+                    {" "}
+                    {/* This component handles auth check */}
+                    <BoardViewPage />{" "}
+                    {/* This is the component rendered if authenticated */}
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFoundPage />} />

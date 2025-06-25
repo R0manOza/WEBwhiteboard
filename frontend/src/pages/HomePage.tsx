@@ -1,10 +1,16 @@
-//import React from 'react';
+import "./HomePage.css";
 
 function HomePage() {
   return (
-    <div className="page"> {/* Use the .page class defined in App.css */}
-      <h1>Home Page</h1>
-      <p>Welcome to the Collaborative Whiteboard app.</p>
+    // Keep the .page class for general layout, add .home-page for specific styles
+    <div className="page home-page">
+      <h1>Welcome to WEBwhiteboard</h1>
+      <p>
+        Your collaborative space for organizing links and notes on shared
+        boards.
+      </p>
+      {/* You could add a link to login or dashboard here later */}
+      {/* <p><a href="/login">Get Started</a></p> */}
     </div>
   );
 }
