@@ -1,135 +1,107 @@
+// frontend/src/components/Board/CreateContainerForm.tsx
 import React, { useState } from 'react';
-import type { ContainerPurpose } from '../../../../shared/types';
-import { useAuth } from '../../contexts/AuthContext';
+import type { ContainerPurpose } from '../../../../shared/types'; // Ensure this path is correct for your shared types
+
 interface CreateContainerFormProps {
-  boardId: string;
-  onCreateSuccess?: (container: any) => void;
+  boardId: string; // Keep if needed for any local logic, or remove if truly unused by this dumb component
+  onCreateSuccess: (formData: { title: string; purpose: ContainerPurpose }) => void; // Parent will make API call
   onCancel?: () => void;
+  loading?: boolean; // Prop from parent to indicate API call is in progress
+  error?: string | null;   // Prop from parent to display API call errors
 }
 
-const CreateContainerForm: React.FC<CreateContainerFormProps> = ({ 
-  boardId, 
-  onCreateSuccess, 
-  onCancel 
+const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
+  // boardId, // You can remove boardId from props if it's not used in this component anymore
+  onCreateSuccess,
+  onCancel,
+  loading = false, // Default to false, controlled by parent
+  error = null,    // Default to null, controlled by parent
 }) => {
   const [title, setTitle] = useState('');
-  const [purpose, setPurpose] = useState<ContainerPurpose>('notes');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [purpose, setPurpose] = useState<ContainerPurpose>('notes'); // Default purpose
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Title is required');
-      return;
+       alert('Title is required'); // Simple client-side validation
+       // Alternatively, you could have an internal error state for form validation,
+       // or the parent could pass down a way to set a form-specific error.
+       // For now, alert is the simplest.
+       return;
     }
-    if (!user) {
-      setError('You must be logged in to create a container.');
-      return;
-    }
-    setLoading(true);
-    setError(null);
 
-    try {
-      // For now, we'll create a container with default position and size
-      // Later we'll integrate with the backend 
-      // already am doing it brother 
-      const token = await user.getIdToken(); // Get the Firebase ID token
-      // Data to send to the backend
+    // Pass the collected form data to the parent component's handler.
+    // The parent (BoardViewPage) will be responsible for making the API call.
+    onCreateSuccess({ title: title.trim(), purpose });
 
-      const containerDataForBackend = {
-        title: title.trim(), // Backend expects 'name'
-        type: purpose,      // Backend expects 'type'
-        position: { x: Math.floor(Math.random() * 500) + 50, y: Math.floor(Math.random() * 200) + 50 }, // Random initial position
-        size: {
-          width: 300,
-          height: purpose === 'links' ? 300 : 200
-        }
-      };
-      console.log('[CreateContainerForm] Sending to backend:', `/api/boards/${boardId}/containers`, containerDataForBackend);
-      console.log('[CreateContainerForm] Data being sent to backend:', containerDataForBackend);
-      const response = await fetch(`/api/boards/${boardId}/containers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(containerDataForBackend),
-      });
-      const responseData = await response.json();
-      if (!response.ok) {
-        throw new Error(responseData.error || `Failed to create container: ${response.status}`);
-      }
-      console.log('[CreateContainerForm] Container created successfully by backend:', responseData);
-      onCreateSuccess?.(responseData as ContainerPurpose);
-      setTitle('');
-      setPurpose('notes');
-    } catch (err: any) {
-      console.error('[CreateContainerForm] Error:', err);
-      setError(err.message || 'Failed to create container');
-    } finally {
-      setLoading(false);
-    }
+    // Reset form fields after attempting submission.
+    // The parent will manage closing the modal.
+    setTitle('');
+    setPurpose('notes');
   };
 
   return (
     <div className="create-container-form">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="container-title">Container Title:</label>
+          <label htmlFor="container-title-input">Container Title:</label> {/* Changed id for clarity */}
           <input
-            id="container-title"
+            id="container-title-input"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter container title..."
             required
-            disabled={loading}
+            disabled={loading} // Use loading prop from parent
             style={{
               width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
+              boxSizing: 'border-box',
             }}
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="container-purpose">Purpose:</label>
+          <label htmlFor="container-purpose-select">Purpose:</label> {/* Changed id for clarity */}
           <select
-            id="container-purpose"
+            id="container-purpose-select"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value as ContainerPurpose)}
             required
-            disabled={loading}
-            style={{
+            disabled={loading} // Use loading prop from parent
+             style={{
               width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
+              boxSizing: 'border-box',
             }}
           >
             <option value="notes">📝 Notes</option>
             <option value="links">🔗 Links</option>
+            
           </select>
         </div>
 
+        {/* Display error passed down from parent (API call error) */}
         {error && (
           <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '8px' }}>
-            {error}
+            Error: {error}
           </div>
         )}
 
-        <div className="form-actions" style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          marginTop: '16px' 
+        <div className="form-actions" style={{
+          display: 'flex',
+          gap: '8px',
+          marginTop: '16px'
         }}>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading} // Use loading prop from parent
             style={{
               padding: '8px 16px',
               backgroundColor: '#2563eb',
@@ -143,12 +115,12 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
           >
             {loading ? 'Creating...' : 'Create Container'}
           </button>
-          
+
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              disabled={loading}
+              disabled={loading} // Use loading prop from parent
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#f3f4f6',
@@ -168,4 +140,4 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
   );
 };
 
-export default CreateContainerForm; 
+export default CreateContainerForm;
