@@ -1,45 +1,41 @@
+// frontend/src/components/Board/CreateContainerForm.tsx
 import React, { useState } from 'react';
-// Import ContainerPurpose type
-import type { ContainerPurpose } from '../../../../shared/types';
+import type { ContainerPurpose } from '../../../../shared/types'; // Ensure this path is correct for your shared types
 
 interface CreateContainerFormProps {
-  boardId: string; // The ID of the board the container is for
-  // Updated signature to pass form data object
-  onCreateSuccess?: (formData: { title: string; purpose: ContainerPurpose }) => void;
+  boardId: string; // Keep if needed for any local logic, or remove if truly unused by this dumb component
+  onCreateSuccess: (formData: { title: string; purpose: ContainerPurpose }) => void; // Parent will make API call
   onCancel?: () => void;
-  // Added loading and error props for API call feedback
-  loading?: boolean;
-  error?: string | null;
+  loading?: boolean; // Prop from parent to indicate API call is in progress
+  error?: string | null;   // Prop from parent to display API call errors
 }
 
 const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
-  boardId, // Keep boardId prop if needed for local logic (e.g., default position calc)
+  // boardId, // You can remove boardId from props if it's not used in this component anymore
   onCreateSuccess,
   onCancel,
-  loading = false, // Default to false
-  error = null,    // Default to null
+  loading = false, // Default to false, controlled by parent
+  error = null,    // Default to null, controlled by parent
 }) => {
   const [title, setTitle] = useState('');
-  const [purpose, setPurpose] = useState<ContainerPurpose>('notes'); // Use imported type
-  // Removed internal loading/error state, now controlled by props from parent
-
+  const [purpose, setPurpose] = useState<ContainerPurpose>('notes'); // Default purpose
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      // Use parent error state or handle validation visually
-      // For now, simple validation message (could improve UI later)
-       alert('Title is required');
+       alert('Title is required'); // Simple client-side validation
+       // Alternatively, you could have an internal error state for form validation,
+       // or the parent could pass down a way to set a form-specific error.
+       // For now, alert is the simplest.
        return;
     }
 
-    // Call the parent-provided function to handle the actual creation (API call)
-    // Pass the necessary form data
-    onCreateSuccess?.({ title: title.trim(), purpose });
+    // Pass the collected form data to the parent component's handler.
+    // The parent (BoardViewPage) will be responsible for making the API call.
+    onCreateSuccess({ title: title.trim(), purpose });
 
-    // Note: Resetting form fields here is okay. The parent handles closing the modal
-    // and displaying loading/error states based on the API call outcome.
-    // If you wanted to keep the form open on error, you wouldn't reset here.
+    // Reset form fields after attempting submission.
+    // The parent will manage closing the modal.
     setTitle('');
     setPurpose('notes');
   };
@@ -48,49 +44,50 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
     <div className="create-container-form">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="container-title">Container Title:</label>
+          <label htmlFor="container-title-input">Container Title:</label> {/* Changed id for clarity */}
           <input
-            id="container-title"
+            id="container-title-input"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter container title..."
             required
-            disabled={loading} // Use loading prop
+            disabled={loading} // Use loading prop from parent
             style={{
-              width: '100%', /* Fixed width */
+              width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              boxSizing: 'border-box', /* Added for padding */
+              boxSizing: 'border-box',
             }}
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="container-purpose">Purpose:</label>
+          <label htmlFor="container-purpose-select">Purpose:</label> {/* Changed id for clarity */}
           <select
-            id="container-purpose"
+            id="container-purpose-select"
             value={purpose}
-            onChange={(e) => setPurpose(e.target.value as ContainerPurpose)} // Cast value to type
+            onChange={(e) => setPurpose(e.target.value as ContainerPurpose)}
             required
-            disabled={loading} // Use loading prop
+            disabled={loading} // Use loading prop from parent
              style={{
-              width: '100%', /* Fixed width */
+              width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              boxSizing: 'border-box', /* Added for padding */
+              boxSizing: 'border-box',
             }}
           >
             <option value="notes">📝 Notes</option>
             <option value="links">🔗 Links</option>
+            
           </select>
         </div>
 
-        {/* Display error from parent prop */}
+        {/* Display error passed down from parent (API call error) */}
         {error && (
           <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '8px' }}>
             Error: {error}
@@ -104,7 +101,7 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
         }}>
           <button
             type="submit"
-            disabled={loading} // Use loading prop
+            disabled={loading} // Use loading prop from parent
             style={{
               padding: '8px 16px',
               backgroundColor: '#2563eb',
@@ -123,7 +120,7 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              disabled={loading} // Use loading prop
+              disabled={loading} // Use loading prop from parent
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#f3f4f6',
