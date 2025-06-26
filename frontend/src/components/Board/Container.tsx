@@ -207,6 +207,36 @@ const Container: React.FC<ContainerProps> = ({
     return container.type === 'notes' ? '#fef3c7' : '#dbeafe';
   };
 
+  // Generate user avatar with initials
+  const getUserAvatar = (displayName: string, userId: string) => {
+    // Clean and validate display name
+    const cleanName = displayName?.trim() || `User${userId.substring(0, 4)}`;
+    
+    // Extract initials (handle multiple words)
+    const words = cleanName.split(/\s+/).filter(word => word.length > 0);
+    let initials = '';
+    
+    if (words.length >= 2) {
+      // Use first letter of first and last word
+      initials = (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    } else if (words.length === 1) {
+      // Use first two letters if available
+      initials = words[0].substring(0, 2).toUpperCase();
+    } else {
+      // Fallback to user ID
+      initials = userId.substring(0, 2).toUpperCase();
+    }
+    
+    // Generate consistent color based on user ID
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    ];
+    const colorIndex = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    
+    return { initials, color: colors[colorIndex] };
+  };
+
   return (
     <div
       ref={containerRef}

@@ -485,7 +485,10 @@ function BoardViewPage() {
 
     // Handler for the list of all online users in the room
     const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
-      if (data.boardId === boardId) setOnlineUsers(data.users);
+      if (data.boardId === boardId) {
+        console.log('Received online users:', data.users);
+        setOnlineUsers(data.users);
+      }
     };
 
     // Handler for another user's drawing status (pen icon)
@@ -611,25 +614,39 @@ function BoardViewPage() {
           const userObj = onlineUsers.find((u) => u.userId === userId);
           const displayName = userObj ? userObj.displayName : userId.substring(0, 6) + '...';
           
-          // Generate a consistent color based on user ID
-          const getAvatarColor = (id: string) => {
+          console.log(`Cursor for user ${userId}: displayName="${displayName}", userObj:`, userObj);
+          
+          // Enhanced avatar generation function
+          const getUserAvatar = (displayName: string, userId: string) => {
+            // Clean and validate display name
+            const cleanName = displayName?.trim() || `User${userId.substring(0, 4)}`;
+            
+            // Extract initials (handle multiple words)
+            const words = cleanName.split(/\s+/).filter(word => word.length > 0);
+            let initials = '';
+            
+            if (words.length >= 2) {
+              // Use first letter of first and last word
+              initials = (words[0][0] + words[words.length - 1][0]).toUpperCase();
+            } else if (words.length === 1) {
+              // Use first two letters if available
+              initials = words[0].substring(0, 2).toUpperCase();
+            } else {
+              // Fallback to user ID
+              initials = userId.substring(0, 2).toUpperCase();
+            }
+            
+            // Generate consistent color based on user ID
             const colors = [
               '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
               '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
             ];
-            const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-            return colors[index];
+            const colorIndex = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+            
+            return { initials, color: colors[colorIndex] };
           };
           
-          // Get user initials for avatar
-          const getInitials = (name: string) => {
-            return name
-              .split(' ')
-              .map(word => word.charAt(0))
-              .join('')
-              .toUpperCase()
-              .substring(0, 2);
-          };
+          const avatar = getUserAvatar(displayName, userId);
           
           return (
             <div
@@ -642,29 +659,78 @@ function BoardViewPage() {
                 zIndex: 1001,
                 pointerEvents: "none",
                 transform: "translate(-50%, -50%)", // Center the cursor
-                transition: "all 0.1s ease-out", // Smooth movement
+                transition: "all 0.15s cubic-bezier(0.4, 0, 0.2, 1)", // Smoother movement
+                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))", // Enhanced shadow
               }}
-              title={displayName} // Show name on hover
+              title={`${displayName} (${userObj?.userId === board?.ownerId ? 'Owner' : 'Collaborator'})`} // Enhanced tooltip
             >
-              {/* User Avatar as Cursor */}
+              {/* Enhanced User Avatar as Cursor */}
               <div
                 style={{
-                  width: "28px",
-                  height: "28px",
+                  width: "32px",
+                  height: "32px",
                   borderRadius: "50%",
-                  backgroundColor: getAvatarColor(userId),
+                  backgroundColor: avatar.color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "white",
-                  fontSize: "11px",
+                  fontSize: "12px",
                   fontWeight: "bold",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                  boxShadow: "0 3px 12px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.8)",
                   border: "2px solid white",
                   cursor: "none", // Hide the actual cursor
+                  position: "relative",
+                  animation: "pulse 2s infinite", // Subtle pulse animation
                 }}
               >
-                {getInitials(displayName)}
+                {avatar.initials}
+                {/* Owner indicator */}
+                {userObj?.userId === board?.ownerId && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "-4px",
+                      right: "-4px",
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      backgroundColor: "#FFD700",
+                      border: "2px solid white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "8px",
+                      color: "#000",
+                    }}
+                    title="Board Owner"
+                  >
+                    ★
+                  </div>
+                )}
+              </div>
+              
+              {/* Display name label */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "40px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  backgroundColor: "rgba(0, 0, 0, 0.8)",
+                  color: "white",
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontWeight: "500",
+                  whiteSpace: "nowrap",
+                  opacity: 0,
+                  transition: "opacity 0.2s ease",
+                  pointerEvents: "none",
+                }}
+                className="cursor-name-label"
+              >
+                {displayName}
               </div>
             </div>
           );

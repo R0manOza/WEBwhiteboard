@@ -31,21 +31,59 @@ export function initializeSocket(io: Server) {
       socket.join(`board:${boardId}`);
       joinedBoards.add(boardId);
 
-      // Fetch displayName from Firestore
-      let displayName = user.name || user.displayName || '';
+      // Enhanced displayName fetching with multiple fallbacks
+      let displayName = '';
       try {
+        // First try to get from Firestore with better error handling
         const userDoc = await admin.firestore().collection('users').doc(user.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          if (userData && userData.displayName) displayName = userData.displayName;
+          if (userData && userData.displayName && userData.displayName.trim()) {
+            displayName = userData.displayName.trim();
+            console.log(`Found displayName in Firestore: "${displayName}"`);
+          }
         }
+        
+        // If no displayName in Firestore, try Firebase Auth user data
+        if (!displayName) {
+          try {
+            const authUser = await admin.auth().getUser(user.uid);
+            if (authUser.displayName && authUser.displayName.trim()) {
+              displayName = authUser.displayName.trim();
+              console.log(`Found displayName in Firebase Auth: "${displayName}"`);
+            } else if (authUser.email) {
+              displayName = authUser.email.split('@')[0];
+              console.log(`Using email username as displayName: "${displayName}"`);
+            }
+          } catch (authError) {
+            console.warn('Could not fetch Firebase Auth user data:', authError);
+          }
+        }
+        
+        // Final fallback: create a user-friendly name from UID
+        if (!displayName) {
+          displayName = `User${user.uid.substring(0, 6).toUpperCase()}`;
+          console.log(`Using fallback displayName: "${displayName}"`);
+        }
+        
       } catch (e) {
-        console.warn('Could not fetch user displayName from Firestore:', e);
+        console.warn('Error fetching user displayName:', e);
+        // Emergency fallback
+        displayName = `User${user.uid.substring(0, 4).toUpperCase()}`;
+        console.log(`Using emergency fallback displayName: "${displayName}"`);
+      }
+
+      // Validate displayName is not empty
+      if (!displayName || displayName.trim() === '') {
+        displayName = `User${user.uid.substring(0, 4).toUpperCase()}`;
+        console.log(`DisplayName was empty, using: "${displayName}"`);
       }
 
       // Add to online users map
       if (!onlineUsersByBoard[boardId]) onlineUsersByBoard[boardId] = {};
       onlineUsersByBoard[boardId][user.uid] = displayName;
+
+      console.log(`Final displayName for user ${user.uid}: "${displayName}"`);
 
       // Broadcast updated online users list
       io.to(`board:${boardId}`).emit('onlineUsers', {
