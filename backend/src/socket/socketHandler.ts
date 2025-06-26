@@ -31,21 +31,34 @@ export function initializeSocket(io: Server) {
       socket.join(`board:${boardId}`);
       joinedBoards.add(boardId);
 
-      // Fetch displayName from Firestore
-      let displayName = user.name || user.displayName || '';
+      // Fetch displayName from Firestore or use Firebase Auth data
+      let displayName = '';
       try {
+        // First try to get from Firestore
         const userDoc = await admin.firestore().collection('users').doc(user.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          if (userData && userData.displayName) displayName = userData.displayName;
+          if (userData && userData.displayName) {
+            displayName = userData.displayName;
+          }
+        }
+        
+        // If no displayName in Firestore, try Firebase Auth user data
+        if (!displayName) {
+          const authUser = await admin.auth().getUser(user.uid);
+          displayName = authUser.displayName || authUser.email?.split('@')[0] || `User${user.uid.substring(0, 4)}`;
         }
       } catch (e) {
-        console.warn('Could not fetch user displayName from Firestore:', e);
+        console.warn('Could not fetch user displayName:', e);
+        // Fallback to email or user ID
+        displayName = user.email?.split('@')[0] || `User${user.uid.substring(0, 4)}`;
       }
 
       // Add to online users map
       if (!onlineUsersByBoard[boardId]) onlineUsersByBoard[boardId] = {};
       onlineUsersByBoard[boardId][user.uid] = displayName;
+
+      console.log(`User ${user.uid} displayName: "${displayName}"`);
 
       // Broadcast updated online users list
       io.to(`board:${boardId}`).emit('onlineUsers', {

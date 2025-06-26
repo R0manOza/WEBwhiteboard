@@ -485,7 +485,10 @@ function BoardViewPage() {
 
     // Handler for the list of all online users in the room
     const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
-      if (data.boardId === boardId) setOnlineUsers(data.users);
+      if (data.boardId === boardId) {
+        console.log('Received online users:', data.users);
+        setOnlineUsers(data.users);
+      }
     };
 
     // Handler for another user's drawing status (pen icon)
@@ -610,6 +613,8 @@ function BoardViewPage() {
           // Find the user object to get their display name.
           const userObj = onlineUsers.find((u) => u.userId === userId);
           const displayName = userObj ? userObj.displayName : userId.substring(0, 6) + '...';
+          
+          console.log(`Cursor for user ${userId}: displayName="${displayName}", userObj:`, userObj);
           
           // Generate a consistent color based on user ID
           const getAvatarColor = (id: string) => {
