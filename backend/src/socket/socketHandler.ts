@@ -148,6 +148,38 @@ export function initializeSocket(io: Server) {
       io.to(`board:${boardId}`).emit('clearBoardDrawing', { boardId });
     });
 
+    // Handle immediate container position updates (for real-time sync)
+    socket.on('containerPositionUpdate', ({ boardId, containerId, position, userId }) => {
+      console.log(`Container position update from ${user.uid} on board ${boardId}, container ${containerId}: (${position.x}, ${position.y})`);
+      socket.to(`board:${boardId}`).emit('containerPositionUpdate', {
+        boardId,
+        containerId,
+        position,
+        userId: user.uid
+      });
+    });
+
+    // Handle immediate container size updates (for real-time sync)
+    socket.on('containerSizeUpdate', ({ boardId, containerId, size, userId }) => {
+      console.log(`Container size update from ${user.uid} on board ${boardId}, container ${containerId}: (${size.width}, ${size.height})`);
+      socket.to(`board:${boardId}`).emit('containerSizeUpdate', {
+        boardId,
+        containerId,
+        size,
+        userId: user.uid
+      });
+    });
+
+    // Handle immediate container deletion (for real-time sync)
+    socket.on('containerDeleted', ({ boardId, containerId }) => {
+      console.log(`Container deletion from ${user.uid} on board ${boardId}, container ${containerId}`);
+      socket.to(`board:${boardId}`).emit('containerDeleted', {
+        boardId,
+        containerId,
+        userId: user.uid
+      });
+    });
+
     // Add more event handlers as needed
 
     // Handle disconnect

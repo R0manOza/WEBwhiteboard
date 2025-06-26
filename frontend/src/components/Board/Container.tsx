@@ -10,6 +10,8 @@ interface ContainerProps {
   onPositionChange?: (containerId: string, newPosition: { x: number; y: number }) => void;
   onSizeChange?: (containerId: string, newSize: { width: number; height: number }) => void;
   onDelete?: (containerId: string) => void;
+  onDragEnd?: (containerId: string) => void;
+  onResizeEnd?: (containerId: string) => void;
   canvasBounds?: { width: number; height: number };
 }
 
@@ -18,6 +20,8 @@ const Container: React.FC<ContainerProps> = ({
   onPositionChange, 
   onSizeChange, 
   onDelete,
+  onDragEnd,
+  onResizeEnd,
   canvasBounds
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -117,55 +121,83 @@ const Container: React.FC<ContainerProps> = ({
 
   // Handle mouse move for dragging
   useEffect(() => {
+    let animationFrameId: number;
+
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging && onPositionChange) {
-        // Calculate new position based on mouse position minus the initial offset
-        const newX = e.clientX - dragOffset.x;
-        const newY = e.clientY - dragOffset.y;
+        // Use requestAnimationFrame for smoother updates
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
         
-        // Keep container within canvas bounds
-        const maxX = canvasBounds ? canvasBounds.width - container.size.width : window.innerWidth - container.size.width;
-        const maxY = canvasBounds ? canvasBounds.height - container.size.height : window.innerHeight - container.size.height;
-        
-        const clampedX = Math.max(0, Math.min(maxX, newX));
-        const clampedY = Math.max(0, Math.min(maxY, newY));
-        
-        onPositionChange(container.id, { x: clampedX, y: clampedY });
+        animationFrameId = requestAnimationFrame(() => {
+          // Calculate new position based on mouse position minus the initial offset
+          const newX = e.clientX - dragOffset.x;
+          const newY = e.clientY - dragOffset.y;
+          
+          // Keep container within canvas bounds
+          const maxX = canvasBounds ? canvasBounds.width - container.size.width : window.innerWidth - container.size.width;
+          const maxY = canvasBounds ? canvasBounds.height - container.size.height : window.innerHeight - container.size.height;
+          
+          const clampedX = Math.max(0, Math.min(maxX, newX));
+          const clampedY = Math.max(0, Math.min(maxY, newY));
+          
+          onPositionChange(container.id, { x: clampedX, y: clampedY });
+        });
       }
       
       if (isResizing && onSizeChange) {
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
+        // Use requestAnimationFrame for smoother resizing
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
         
-        const newWidth = Math.max(200, resizeStart.width + deltaX);
-        const newHeight = Math.max(150, resizeStart.height + deltaY);
-        
-        // Also constrain resize to canvas bounds
-        const maxWidth = canvasBounds ? canvasBounds.width - container.position.x : window.innerWidth - container.position.x;
-        const maxHeight = canvasBounds ? canvasBounds.height - container.position.y : window.innerHeight - container.position.y;
-        
-        const constrainedWidth = Math.min(newWidth, maxWidth);
-        const constrainedHeight = Math.min(newHeight, maxHeight);
-        
-        onSizeChange(container.id, { width: constrainedWidth, height: constrainedHeight });
+        animationFrameId = requestAnimationFrame(() => {
+          const deltaX = e.clientX - resizeStart.x;
+          const deltaY = e.clientY - resizeStart.y;
+          
+          const newWidth = Math.max(200, resizeStart.width + deltaX);
+          const newHeight = Math.max(150, resizeStart.height + deltaY);
+          
+          // Also constrain resize to canvas bounds
+          const maxWidth = canvasBounds ? canvasBounds.width - container.position.x : window.innerWidth - container.position.x;
+          const maxHeight = canvasBounds ? canvasBounds.height - container.position.y : window.innerHeight - container.position.y;
+          
+          const constrainedWidth = Math.min(newWidth, maxWidth);
+          const constrainedHeight = Math.min(newHeight, maxHeight);
+          
+          onSizeChange(container.id, { width: constrainedWidth, height: constrainedHeight });
+        });
       }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
       setIsResizing(false);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (onDragEnd) {
+        onDragEnd(container.id);
+      }
+      if (onResizeEnd) {
+        onResizeEnd(container.id);
+      }
     };
 
     if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mousemove', handleMouseMove, { passive: true });
       document.addEventListener('mouseup', handleMouseUp);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
-  }, [isDragging, isResizing, dragOffset, resizeStart, container, onPositionChange, onSizeChange, canvasBounds]);
+  }, [isDragging, isResizing, dragOffset, resizeStart, container, onPositionChange, onSizeChange, canvasBounds, onDragEnd, onResizeEnd]);
 
   const getContainerIcon = () => {
     return container.type === 'notes' ? '📝' : '🔗';
@@ -196,6 +228,9 @@ const Container: React.FC<ContainerProps> = ({
         overflow: 'hidden',
         transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
         zIndex: isDragging ? 1000 : 1,
+        // Performance optimizations
+        willChange: isDragging || isResizing ? 'transform' : 'auto',
+        transform: isDragging || isResizing ? 'translateZ(0)' : 'none', // Force hardware acceleration
       }}
       onMouseDown={handleMouseDown}
     >

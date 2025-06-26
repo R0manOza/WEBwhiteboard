@@ -143,4 +143,147 @@ router.get('/', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Re
         res.status(500).json({ error: 'Failed to fetch containers', details: error.message });
     }
 });
+
+// PUT /api/boards/:boardId/containers/:containerId - Update container position/size
+router.put('/:containerId', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { boardId, containerId } = req.params;
+    const { position, size } = req.body;
+    const user = req.user;
+
+    console.log(`[PUT /api/boards/${boardId}/containers/${containerId}] Attempting to update container. User: ${user?.uid}`);
+
+    if (!user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    if (!boardId || !containerId) {
+        res.status(400).json({ error: 'Board ID and Container ID parameters are required.' });
+        return;
+    }
+
+    // Validate position and size if provided
+    if (position && (typeof position.x !== 'number' || typeof position.y !== 'number')) {
+        res.status(400).json({ error: 'Container position must have valid x and y coordinates.' });
+        return;
+    }
+
+    if (size && (typeof size.width !== 'number' || typeof size.height !== 'number' || size.width <= 0 || size.height <= 0)) {
+        res.status(400).json({ error: 'Container size must have valid positive width and height.' });
+        return;
+    }
+
+    try {
+        const boardRef = firestore.collection('boards').doc(boardId);
+        const boardDoc = await boardRef.get();
+        if (!boardDoc.exists) {
+            res.status(404).json({ error: 'Board not found.' });
+            return;
+        }
+
+        const containerRef = firestore.collection('boards').doc(boardId).collection('containers').doc(containerId);
+        const containerDoc = await containerRef.get();
+        if (!containerDoc.exists) {
+            res.status(404).json({ error: 'Container not found.' });
+            return;
+        }
+
+        // Build update object with only provided fields
+        const updateData: Partial<ContainerData> = { updatedAt: Date.now() };
+        if (position) updateData.position = position;
+        if (size) updateData.size = size;
+
+        await containerRef.update(updateData);
+        
+        // Get the updated container data
+        const updatedContainerDoc = await containerRef.get();
+        const updatedContainer = updatedContainerDoc.data() as ContainerData;
+
+        console.log(`[PUT /api/boards/${boardId}/containers/${containerId}] Container updated successfully`);
+
+        // Emit real-time event
+        const io = req.app.get('socketio');
+        if (io) {
+            io.to(`board:${boardId}`).emit('containerUpdated', {
+                boardId,
+                containerId,
+                updates: updateData,
+                container: updatedContainer,
+                userId: user.uid
+            });
+            console.log(`[Socket EMIT board:${boardId}] containerUpdated:`, containerId);
+        } else {
+            console.warn('Socket.IO instance not found on app object. Cannot emit containerUpdated.');
+        }
+
+        res.status(200).json(updatedContainer);
+
+    } catch (error: any) {
+        console.error(`[PUT /api/boards/${boardId}/containers/${containerId}] Error updating container:`, error);
+        res.status(500).json({ error: 'Failed to update container', details: error.message });
+    }
+});
+
+// DELETE /api/boards/:boardId/containers/:containerId - Delete container
+router.delete('/:containerId', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { boardId, containerId } = req.params;
+    const user = req.user;
+
+    console.log(`[DELETE /api/boards/${boardId}/containers/${containerId}] Attempting to delete container. User: ${user?.uid}`);
+
+    if (!user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+
+    if (!boardId || !containerId) {
+        res.status(400).json({ error: 'Board ID and Container ID parameters are required.' });
+        return;
+    }
+
+    try {
+        const boardRef = firestore.collection('boards').doc(boardId);
+        const boardDoc = await boardRef.get();
+        if (!boardDoc.exists) {
+            res.status(404).json({ error: 'Board not found.' });
+            return;
+        }
+
+        const containerRef = firestore.collection('boards').doc(boardId).collection('containers').doc(containerId);
+        const containerDoc = await containerRef.get();
+        if (!containerDoc.exists) {
+            res.status(404).json({ error: 'Container not found.' });
+            return;
+        }
+
+        // TODO: Add authorization check - only container owner or board owner can delete
+        const containerData = containerDoc.data() as ContainerData;
+        if (containerData.ownerId !== user.uid && boardDoc.data()?.ownerId !== user.uid) {
+            res.status(403).json({ error: 'You do not have permission to delete this container.' });
+            return;
+        }
+
+        await containerRef.delete();
+        console.log(`[DELETE /api/boards/${boardId}/containers/${containerId}] Container deleted successfully`);
+
+        // Emit real-time event
+        const io = req.app.get('socketio');
+        if (io) {
+            io.to(`board:${boardId}`).emit('containerDeleted', {
+                boardId,
+                containerId
+            });
+            console.log(`[Socket EMIT board:${boardId}] containerDeleted:`, containerId);
+        } else {
+            console.warn('Socket.IO instance not found on app object. Cannot emit containerDeleted.');
+        }
+
+        res.status(200).json({ message: 'Container deleted successfully' });
+
+    } catch (error: any) {
+        console.error(`[DELETE /api/boards/${boardId}/containers/${containerId}] Error deleting container:`, error);
+        res.status(500).json({ error: 'Failed to delete container', details: error.message });
+    }
+});
+
 export default router; 
