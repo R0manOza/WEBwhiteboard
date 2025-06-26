@@ -4,9 +4,8 @@ import http from 'http';
 import { Server } from 'socket.io';
 import admin from './config/firebaseAdmin';
 import authRoutes from './routes/authRoutes';
-import { initializeSocket } from './socket/socketHandler';
 import boardsRouter from './routes/boards';
-
+import { initializeSocket } from './socket/socketHandler';
 const app: Express = express();
 const port = process.env.PORT || 3001; // Backend port
 
@@ -48,6 +47,7 @@ app.use('/api/boards', boardsRouter);
 server.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+app.set('socketio', io);
 
 //usefull features of express
 //app.get('/users', getAllUsers);

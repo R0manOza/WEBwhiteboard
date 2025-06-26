@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ContainerPurpose } from '../../../../shared/types';
-
+import { useAuth } from '../../contexts/AuthContext';
 interface CreateContainerFormProps {
   boardId: string;
   onCreateSuccess?: (container: any) => void;
@@ -16,38 +16,56 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
   const [purpose, setPurpose] = useState<ContainerPurpose>('notes');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const { user } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('Title is required');
       return;
     }
-
+    if (!user) {
+      setError('You must be logged in to create a container.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
     try {
       // For now, we'll create a container with default position and size
-      // Later we'll integrate with the backend
-      const newContainer = {
-        id: `temp-${Date.now()}`,
-        boardId,
-        title: title.trim(),
-        purpose,
-        position: { x: 100, y: 100 },
-        size: { 
-          width: 300, 
-          height: purpose === 'links' ? 300 : 200 // Make links containers taller
-        },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
+      // Later we'll integrate with the backend 
+      // already am doing it brother 
+      const token = await user.getIdToken(); // Get the Firebase ID token
+      // Data to send to the backend
 
-      onCreateSuccess?.(newContainer);
+      const containerDataForBackend = {
+        name: title.trim(), // Backend expects 'name'
+        type: purpose,      // Backend expects 'type'
+        position: { x: Math.floor(Math.random() * 500) + 50, y: Math.floor(Math.random() * 200) + 50 }, // Random initial position
+        size: {
+          width: 300,
+          height: purpose === 'links' ? 300 : 200
+        }
+      };
+      console.log('[CreateContainerForm] Sending to backend:', `/api/boards/${boardId}/containers`, containerDataForBackend);
+      console.log('[CreateContainerForm] Data being sent to backend:', containerDataForBackend);
+      const response = await fetch(`/api/boards/${boardId}/containers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(containerDataForBackend),
+      });
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.error || `Failed to create container: ${response.status}`);
+      }
+      console.log('[CreateContainerForm] Container created successfully by backend:', responseData);
+      onCreateSuccess?.(responseData as ContainerPurpose);
       setTitle('');
       setPurpose('notes');
     } catch (err: any) {
+      console.error('[CreateContainerForm] Error:', err);
       setError(err.message || 'Failed to create container');
     } finally {
       setLoading(false);

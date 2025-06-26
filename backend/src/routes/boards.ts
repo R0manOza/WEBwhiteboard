@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import admin from '../config/firebaseAdmin';
 import { verifyTokenMiddleware, AuthenticatedRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
-
+import containerRoutes from './containerRoutes';
 const router = express.Router();
 const firestore = admin.firestore();
 
@@ -190,5 +190,5 @@ router.delete('/:id', verifyTokenMiddleware, async (req: AuthenticatedRequest, r
     res.status(500).json({ error: 'Failed to delete board', details: err instanceof Error ? err.message : err });
   }
 });
-
+router.use('/:boardId/containers', containerRoutes);
 export default router; 

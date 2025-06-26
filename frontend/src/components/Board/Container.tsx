@@ -144,11 +144,11 @@ const Container: React.FC<ContainerProps> = ({
   }, [isDragging, isResizing, dragOffset, resizeStart, container, onPositionChange, onSizeChange, canvasBounds]);
 
   const getContainerIcon = () => {
-    return container.purpose === 'notes' ? '📝' : '🔗';
+    return container.type === 'notes' ? '📝' : '🔗';
   };
 
   const getContainerColor = () => {
-    return container.purpose === 'notes' ? '#fef3c7' : '#dbeafe';
+    return container.type === 'notes' ? '#fef3c7' : '#dbeafe';
   };
 
   return (
@@ -205,7 +205,7 @@ const Container: React.FC<ContainerProps> = ({
         </div>
         
         {/* Notes container mode toggle */}
-        {container.purpose === 'notes' && (
+        {container.type === 'notes' && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -263,7 +263,7 @@ const Container: React.FC<ContainerProps> = ({
           backgroundColor: 'transparent',
         }}
       >
-        {container.purpose === 'notes' ? (
+        {container.type === 'notes' ? (
           isDrawingMode ? (
             <ContainerDrawing
               boardId={container.boardId}

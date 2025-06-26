@@ -24,7 +24,7 @@ export interface Container {
   id: string;
   boardId: string;
   title: string;
-  purpose: "links" | "notes";
+  type: ContainerPurpose;
   position: { x: number; y: number };
   size: { width: number; height: number };
   style?: { backgroundColor?: string; borderStyle?: string };

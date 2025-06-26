@@ -33,9 +33,11 @@ const {
     position, 
     size, 
   } = req.body;
+  console.log(`[POST /api/boards/${boardId}/containers] Received type from req.body: "${type}"`);
   const user = req.user;
 
   console.log(`[POST /api/boards/${boardId}/containers] Attempting to create container. User: ${user?.uid}, Name: ${name}, Type: ${type}`);
+   
 
   if (!user) {
     console.log(`[POST /api/boards/${boardId}/containers] Unauthorized - No user on request.`);
@@ -88,6 +90,16 @@ const {
     };
     await firestore.collection('boards').doc(boardId).collection('containers').doc(containerId).set(newContainer);
     console.log(`[POST /api/boards/${boardId}/containers] Container created successfully: ${containerId}`);
+    
+    // Emit event to notify other users in the board via Socket.IO
+    const io = req.app.get('socketio'); 
+    if (io) {
+      io.to(`board:${boardId}`).emit('containerCreated', newContainer);
+      console.log(`[Socket EMIT board:${boardId}] containerCreated:`, newContainer.id);
+    } else {
+      console.warn('Socket.IO instance not found on app object. Cannot emit containerCreated.');
+    }
+    // Emit event to notify other users in the board
      res.status(201).json(newContainer);
      } catch (error: any) {
     console.error(`[POST /api/boards/${boardId}/containers] Error creating container:`, error);
