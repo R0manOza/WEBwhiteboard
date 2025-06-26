@@ -92,6 +92,9 @@ function BoardViewPage() {
   const [otherCursors, setOtherCursors] = useState<{ [userId: string]: { x: number; y: number } }>({});
   const [ownerName, setOwnerName] = useState<string>("");
 
+  // Track active user interactions to prevent API overwrites
+  const [activeUserUpdates, setActiveUserUpdates] = useState<Set<string>>(new Set());
+
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // --- Data Fetching and Logic ---
@@ -245,41 +248,182 @@ function BoardViewPage() {
     }
   }, [user, boardId]);
 
-  // TODO: Create memoized handlers for updating and deleting containers that call the backend APIs
+  // Container handlers using debounced API calls
   const handleContainerPositionChange = (
-  containerId: string,
-  newPosition: { x: number; y: number }
-) => {
-  setContainers((prev) =>
-    prev.map((container) =>
-      container.id === containerId
-        ? { ...container, position: newPosition, updatedAt: Date.now() }
-        : container
-    )
-  );
-  // TODO: Add API call to persist this change
-};
-  const handleContainerSizeChange = (
-  containerId: string,
-  newSize: { width: number; height: number }
-) => {
-  setContainers((prev) =>
-    prev.map((container) =>
-      container.id === containerId
-        ? { ...container, size: newSize, updatedAt: Date.now() }
-        : container
-    )
-  );
-  // TODO: Add API call to persist this change
-};
-  const handleContainerDelete = (containerId: string) => {
-  if (window.confirm("Are you sure you want to delete this container?")) {
+    containerId: string,
+    newPosition: { x: number; y: number }
+  ) => {
+    // Mark this container as being actively updated by the user
+    setActiveUserUpdates(prev => new Set(prev).add(containerId));
+    
     setContainers((prev) =>
-      prev.filter((container) => container.id !== containerId)
+      prev.map((container) =>
+        container.id === containerId
+          ? { ...container, position: newPosition, updatedAt: Date.now() }
+          : container
+      )
     );
-    // TODO: Add API call to persist this change
-  }
-};
+    
+    // Immediate socket emission for real-time sync
+    emitPositionUpdate(containerId, newPosition);
+    
+    // Debounced API call to persist the change
+    debouncedPositionUpdate(containerId, newPosition);
+  };
+
+  const handleContainerSizeChange = (
+    containerId: string,
+    newSize: { width: number; height: number }
+  ) => {
+    // Mark this container as being actively updated by the user
+    setActiveUserUpdates(prev => new Set(prev).add(containerId));
+    
+    setContainers((prev) =>
+      prev.map((container) =>
+        container.id === containerId
+          ? { ...container, size: newSize, updatedAt: Date.now() }
+          : container
+      )
+    );
+    
+    // Immediate socket emission for real-time sync
+    emitSizeUpdate(containerId, newSize);
+    
+    // Debounced API call to persist the change
+    debouncedSizeUpdate(containerId, newSize);
+  };
+
+  const handleContainerDelete = (containerId: string) => {
+    if (window.confirm("Are you sure you want to delete this container?")) {
+      // Optimistic update - remove from local state immediately
+      setContainers((prev) =>
+        prev.filter((container) => container.id !== containerId)
+      );
+      
+      // Immediate socket emission for real-time sync
+      if (socket && isConnected && hasAccess && boardId && boardId !== SAMPLE_BOARD_ID) {
+        socket.emit('containerDeleted', {
+          boardId,
+          containerId,
+          userId: user?.uid
+        });
+      }
+      
+      // Make API call to persist the deletion
+      if (user && boardId && boardId !== SAMPLE_BOARD_ID) {
+        user.getIdToken().then(token => {
+          fetch(`/api/boards/${boardId}/containers/${containerId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }).catch(error => {
+            console.error('Failed to delete container:', error);
+            // Revert local state if API call fails
+            setContainers((prev) => {
+              const deletedContainer = prev.find(c => c.id === containerId);
+              return deletedContainer ? [...prev, deletedContainer] : prev;
+            });
+          });
+        });
+      }
+    }
+  };
+
+  // Handle drag end to clear active update flags
+  const handleContainerDragEnd = (containerId: string) => {
+    // Add a small delay to ensure API response doesn't interfere
+    setTimeout(() => {
+      setActiveUserUpdates(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(containerId);
+        return newSet;
+      });
+    }, 100); // 100ms delay
+  };
+
+  // Handle resize end to clear active update flags
+  const handleContainerResizeEnd = (containerId: string) => {
+    // Add a small delay to ensure API response doesn't interfere
+    setTimeout(() => {
+      setActiveUserUpdates(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(containerId);
+        return newSet;
+      });
+    }, 100); // 100ms delay
+  };
+
+  // Debounced API calls for position and size updates
+  const debouncedPositionUpdate = useCallback(
+    throttle((containerId: string, newPosition: { x: number; y: number }) => {
+      if (user && boardId && boardId !== SAMPLE_BOARD_ID) {
+        user.getIdToken().then(token => {
+          fetch(`/api/boards/${boardId}/containers/${containerId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ position: newPosition }),
+          }).catch(error => {
+            console.error('Failed to update container position:', error);
+          });
+        });
+      }
+    }, 16), // Reduced from 100ms to 16ms for 60fps updates
+    [user, boardId]
+  );
+
+  const debouncedSizeUpdate = useCallback(
+    throttle((containerId: string, newSize: { width: number; height: number }) => {
+      if (user && boardId && boardId !== SAMPLE_BOARD_ID) {
+        user.getIdToken().then(token => {
+          fetch(`/api/boards/${boardId}/containers/${containerId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ size: newSize }),
+          }).catch(error => {
+            console.error('Failed to update container size:', error);
+          });
+        });
+      }
+    }, 16), // Reduced from 100ms to 16ms for 60fps updates
+    [user, boardId]
+  );
+
+  // Immediate socket emission for real-time position updates (without API call)
+  const emitPositionUpdate = useCallback(
+    throttle((containerId: string, newPosition: { x: number; y: number }) => {
+      if (socket && isConnected && hasAccess && boardId && boardId !== SAMPLE_BOARD_ID) {
+        socket.emit('containerPositionUpdate', {
+          boardId,
+          containerId,
+          position: newPosition,
+          userId: user?.uid // Add user ID to identify the source
+        });
+      }
+    }, 16), // 60fps updates
+    [socket, isConnected, hasAccess, boardId, user]
+  );
+
+  // Immediate socket emission for real-time size updates (without API call)
+  const emitSizeUpdate = useCallback(
+    throttle((containerId: string, newSize: { width: number; height: number }) => {
+      if (socket && isConnected && hasAccess && boardId && boardId !== SAMPLE_BOARD_ID) {
+        socket.emit('containerSizeUpdate', {
+          boardId,
+          containerId,
+          size: newSize,
+          userId: user?.uid // Add user ID to identify the source
+        });
+      }
+    }, 16), // 60fps updates
+    [socket, isConnected, hasAccess, boardId, user]
+  );
 
   // Effect for Socket Listeners
   useEffect(() => {
@@ -305,6 +449,40 @@ function BoardViewPage() {
       }
     };
 
+    // Handler for when a container is deleted by any user
+    const onContainerDeleted = (data: { boardId: string; containerId: string; userId: string }) => {
+      console.log(`[Socket IN board:${boardId}] containerDeleted received:`, data);
+      if (data.boardId === boardId && data.userId !== user?.uid) {
+        setContainers(prev => prev.filter(container => container.id !== data.containerId));
+      }
+    };
+
+    // Handler for immediate position updates from other users
+    const onContainerPositionUpdate = (data: { boardId: string; containerId: string; position: { x: number; y: number }; userId: string }) => {
+      if (data.boardId === boardId && data.userId !== user?.uid && !activeUserUpdates.has(data.containerId)) {
+        setContainers(prev => 
+          prev.map(container => 
+            container.id === data.containerId 
+              ? { ...container, position: data.position, updatedAt: Date.now() }
+              : container
+          )
+        );
+      }
+    };
+
+    // Handler for immediate size updates from other users
+    const onContainerSizeUpdate = (data: { boardId: string; containerId: string; size: { width: number; height: number }; userId: string }) => {
+      if (data.boardId === boardId && data.userId !== user?.uid && !activeUserUpdates.has(data.containerId)) {
+        setContainers(prev => 
+          prev.map(container => 
+            container.id === data.containerId 
+              ? { ...container, size: data.size, updatedAt: Date.now() }
+              : container
+          )
+        );
+      }
+    };
+
     // Handler for the list of all online users in the room
     const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
       if (data.boardId === boardId) setOnlineUsers(data.users);
@@ -326,19 +504,25 @@ function BoardViewPage() {
 
     // --- Register all the listeners ---
     socket.on('containerCreated', onContainerCreated);
+    socket.on('containerDeleted', onContainerDeleted);
     socket.on("onlineUsers", handleOnlineUsers);
     socket.on("userDrawingStatus", handleUserDrawingStatus);
-    socket.on("cursorMoved", handleCursorMoved); // <<< ADDED THIS BACK
+    socket.on("cursorMoved", handleCursorMoved);
+    socket.on("containerPositionUpdate", onContainerPositionUpdate);
+    socket.on("containerSizeUpdate", onContainerSizeUpdate);
 
     // Cleanup function to remove listeners when component unmounts or dependencies change
     return () => {
       console.log(`BoardViewPage (${boardId}): Cleaning up all socket listeners.`);
       socket.off('containerCreated', onContainerCreated);
+      socket.off('containerDeleted', onContainerDeleted);
       socket.off("onlineUsers", handleOnlineUsers);
       socket.off("userDrawingStatus", handleUserDrawingStatus);
-      socket.off("cursorMoved", handleCursorMoved); // <<< ALSO ADD CLEANUP FOR IT
+      socket.off("cursorMoved", handleCursorMoved);
+      socket.off("containerPositionUpdate", onContainerPositionUpdate);
+      socket.off("containerSizeUpdate", onContainerSizeUpdate);
     };
-  }, [socket, isConnected, hasAccess, boardId, user]);
+  }, [socket, isConnected, hasAccess, boardId, user, activeUserUpdates]);
 
   // Effect for Mouse Move Listener for broadcasting cursor position
   const sendCursorPosition = useCallback(throttle((x, y) => {
@@ -425,9 +609,28 @@ function BoardViewPage() {
         {Object.entries(otherCursors).map(([userId, position]) => {
           // Find the user object to get their display name.
           const userObj = onlineUsers.find((u) => u.userId === userId);
+          const displayName = userObj ? userObj.displayName : userId.substring(0, 6) + '...';
           
-          // Render the cursor regardless of whether the user name is available yet.
-          // This fixes the race condition.
+          // Generate a consistent color based on user ID
+          const getAvatarColor = (id: string) => {
+            const colors = [
+              '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+              '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+            ];
+            const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+            return colors[index];
+          };
+          
+          // Get user initials for avatar
+          const getInitials = (name: string) => {
+            return name
+              .split(' ')
+              .map(word => word.charAt(0))
+              .join('')
+              .toUpperCase()
+              .substring(0, 2);
+          };
+          
           return (
             <div
               key={userId}
@@ -436,15 +639,33 @@ function BoardViewPage() {
                 position: "absolute",
                 left: position.x,
                 top: position.y,
-                zIndex: 1001, // Ensure cursors are on top
+                zIndex: 1001,
                 pointerEvents: "none",
+                transform: "translate(-50%, -50%)", // Center the cursor
+                transition: "all 0.1s ease-out", // Smooth movement
               }}
+              title={displayName} // Show name on hover
             >
-              <div className="cursor-name-label">
-                {/* Fallback to showing a snippet of the userId if the full user object isn't in state yet */}
-                {userObj ? userObj.displayName : userId.substring(0, 6) + '...'}
+              {/* User Avatar as Cursor */}
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  backgroundColor: getAvatarColor(userId),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                  border: "2px solid white",
+                  cursor: "none", // Hide the actual cursor
+                }}
+              >
+                {getInitials(displayName)}
               </div>
-              <div className="other-user-cursor"></div>
             </div>
           );
         })}
@@ -460,6 +681,8 @@ function BoardViewPage() {
                 onPositionChange={handleContainerPositionChange}
                 onSizeChange={handleContainerSizeChange}
                 onDelete={handleContainerDelete}
+                onDragEnd={handleContainerDragEnd}
+                onResizeEnd={handleContainerResizeEnd}
                 canvasBounds={{ width: 1200, height: 600 }}
               />
             ))}
