@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Container as ContainerType, NoteItem, LinkItem } from '../../../../shared/types';
+import type { Container as ContainerType, NoteItem as NoteItemType, LinkItem as LinkItemType } from '../../../../shared/types';
 import ContainerDrawing from './ContainerDrawing';
 import NoteItem from '../Items/NoteItem';
 import LinkItem from '../Items/LinkItem';
@@ -26,8 +26,8 @@ const Container: React.FC<ContainerProps> = ({
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
   // Items state
-  const [notes, setNotes] = useState<NoteItem[]>([]);
-  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [notes, setNotes] = useState<NoteItemType[]>([]);
+  const [links, setLinks] = useState<LinkItemType[]>([]);
   
   // Drawing state for notes containers
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -70,17 +70,17 @@ const Container: React.FC<ContainerProps> = ({
   };
 
   // Handle creating a new item
-  const handleCreateItem = (newItem: NoteItem | LinkItem) => {
-    if (container.purpose === 'notes') {
-      setNotes(prev => [...prev, newItem as NoteItem]);
+  const handleCreateItem = (newItem: NoteItemType | LinkItemType) => {
+    if (container.type === 'notes') {
+      setNotes(prev => [...prev, newItem as NoteItemType]);
     } else {
-      setLinks(prev => [...prev, newItem as LinkItem]);
+      setLinks(prev => [...prev, newItem as LinkItemType]);
     }
     setShowCreateItemForm(false);
   };
 
   // Handle updating a note
-  const handleUpdateNote = async (itemId: string, updates: Partial<NoteItem>) => {
+  const handleUpdateNote = async (itemId: string, updates: Partial<NoteItemType>) => {
     setNotes(prev => 
       prev.map(note => 
         note.id === itemId 
@@ -92,7 +92,7 @@ const Container: React.FC<ContainerProps> = ({
   };
 
   // Handle updating a link
-  const handleUpdateLink = async (itemId: string, updates: Partial<LinkItem>) => {
+  const handleUpdateLink = async (itemId: string, updates: Partial<LinkItemType>) => {
     setLinks(prev => 
       prev.map(link => 
         link.id === itemId 
@@ -267,7 +267,7 @@ const Container: React.FC<ContainerProps> = ({
             fontSize: '12px',
             marginRight: '8px',
           }}
-          title={`Add ${container.purpose === 'notes' ? 'Note' : 'Link'}`}
+          title={`Add ${container.type === 'notes' ? 'Note' : 'Link'}`}
         >
           ➕
         </button>
@@ -374,7 +374,7 @@ const Container: React.FC<ContainerProps> = ({
           <div className="create-item-modal-content">
             <CreateItemForm
               containerId={container.id}
-              containerPurpose={container.purpose}
+              containerPurpose={container.type}
               onCreateSuccess={handleCreateItem}
               onCancel={() => setShowCreateItemForm(false)}
             />

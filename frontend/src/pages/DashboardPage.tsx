@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './DashboardPage.css'; // Add this for custom styles

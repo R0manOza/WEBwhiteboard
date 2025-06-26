@@ -42,7 +42,7 @@ const sampleContainersData: ContainerType[] = [
     boardId: SAMPLE_BOARD_ID,
     title: "Welcome!", // Standardized to 'title'
     type: "notes",   // Standardized to 'type'
-    ownerId: "sample-user-id",
+    
     position: { x: 50, y: 50 },
     size: { width: 300, height: 200 },
     createdAt: Date.now(),
@@ -53,7 +53,7 @@ const sampleContainersData: ContainerType[] = [
     boardId: SAMPLE_BOARD_ID,
     title: "Example Links", // Standardized to 'title'
     type: "links",      // Standardized to 'type'
-    ownerId: "sample-user-id",
+    
     position: { x: 400, y: 100 },
     size: { width: 350, height: 300 },
     createdAt: Date.now(),
@@ -246,50 +246,97 @@ function BoardViewPage() {
   }, [user, boardId]);
 
   // TODO: Create memoized handlers for updating and deleting containers that call the backend APIs
-  const handleContainerPositionChange = useCallback((id: string, pos: { x: number; y: number }) => { /* API call */ }, []);
-  const handleContainerSizeChange = useCallback((id: string, size: { width: number; height: number }) => { /* API call */ }, []);
-  const handleContainerDelete = useCallback((id: string) => { /* API call */ }, []);
+  const handleContainerPositionChange = (
+  containerId: string,
+  newPosition: { x: number; y: number }
+) => {
+  setContainers((prev) =>
+    prev.map((container) =>
+      container.id === containerId
+        ? { ...container, position: newPosition, updatedAt: Date.now() }
+        : container
+    )
+  );
+  // TODO: Add API call to persist this change
+};
+  const handleContainerSizeChange = (
+  containerId: string,
+  newSize: { width: number; height: number }
+) => {
+  setContainers((prev) =>
+    prev.map((container) =>
+      container.id === containerId
+        ? { ...container, size: newSize, updatedAt: Date.now() }
+        : container
+    )
+  );
+  // TODO: Add API call to persist this change
+};
+  const handleContainerDelete = (containerId: string) => {
+  if (window.confirm("Are you sure you want to delete this container?")) {
+    setContainers((prev) =>
+      prev.filter((container) => container.id !== containerId)
+    );
+    // TODO: Add API call to persist this change
+  }
+};
 
   // Effect for Socket Listeners
   useEffect(() => {
-    if (!socket || !isConnected || !hasAccess || !boardId || !user) return;
-    console.log(`BoardViewPage (${boardId}): Setting up socket listeners.`);
+    // Exit if socket isn't ready or user doesn't have access
+    if (!socket || !isConnected || !hasAccess || !boardId || !user) {
+      // Clear any stale real-time data if dependencies change and we can't listen
+      setOnlineUsers([]);
+      setDrawingUsers({});
+      setOtherCursors({});
+      return;
+    }
 
+    console.log(`BoardViewPage (${boardId}): Setting up all socket listeners.`);
+
+    // Handler for when a container is created by any user
     const onContainerCreated = (newContainer: ContainerType) => {
+      console.log(`[Socket IN board:${boardId}] containerCreated received:`, newContainer);
       if (newContainer.boardId === boardId) {
-        setContainers(prev => [
-          ...prev.filter(c => c.id !== newContainer.id), // Prevent duplicates
-          newContainer
-        ].sort((a,b) => a.createdAt - b.createdAt));
+        setContainers(prev => {
+          if (prev.find(c => c.id === newContainer.id)) return prev;
+          return [...prev, newContainer].sort((a,b) => a.createdAt - b.createdAt);
+        });
       }
     };
+
+    // Handler for the list of all online users in the room
     const handleOnlineUsers = (data: { boardId: string; users: { userId: string; displayName: string }[] }) => {
       if (data.boardId === boardId) setOnlineUsers(data.users);
     };
+
+    // Handler for another user's drawing status (pen icon)
     const handleUserDrawingStatus = (data: { boardId: string; userId: string; isDrawing: boolean }) => {
       if (data.boardId === boardId && data.userId !== user.uid) {
         setDrawingUsers(prev => ({ ...prev, [data.userId]: data.isDrawing }));
       }
     };
+
+    // Handler for another user's cursor position
     const handleCursorMoved = (data: CursorPosition) => {
       if (data.boardId === boardId && data.userId !== user.uid) {
         setOtherCursors(prev => ({ ...prev, [data.userId]: { x: data.x, y: data.y } }));
       }
     };
 
+    // --- Register all the listeners ---
     socket.on('containerCreated', onContainerCreated);
     socket.on("onlineUsers", handleOnlineUsers);
     socket.on("userDrawingStatus", handleUserDrawingStatus);
-    socket.on("cursorMoved", handleCursorMoved);
-    // TODO: Listen for containerUpdated, containerDeleted
+    socket.on("cursorMoved", handleCursorMoved); // <<< ADDED THIS BACK
 
+    // Cleanup function to remove listeners when component unmounts or dependencies change
     return () => {
-      console.log(`BoardViewPage (${boardId}): Cleaning up socket listeners.`);
+      console.log(`BoardViewPage (${boardId}): Cleaning up all socket listeners.`);
       socket.off('containerCreated', onContainerCreated);
       socket.off("onlineUsers", handleOnlineUsers);
       socket.off("userDrawingStatus", handleUserDrawingStatus);
-      socket.off("cursorMoved", handleCursorMoved);
-      // TODO: Clean up other listeners
+      socket.off("cursorMoved", handleCursorMoved); // <<< ALSO ADD CLEANUP FOR IT
     };
   }, [socket, isConnected, hasAccess, boardId, user]);
 
@@ -372,15 +419,31 @@ function BoardViewPage() {
 
       <div ref={canvasRef} className={`boardview-canvas-area ${isDrawingMode ? 'drawing-mode' : ''}`}>
         {isDrawingMode && user && (
-          <DrawingCanvas boardId={boardId} width={1200} height={600} className="drawing-canvas" />
+          <DrawingCanvas boardId={boardId || ""} width={1200} height={600} className="drawing-canvas" />
         )}
         
         {Object.entries(otherCursors).map(([userId, position]) => {
+          // Find the user object to get their display name.
           const userObj = onlineUsers.find((u) => u.userId === userId);
-          if (!userObj) return null;
+          
+          // Render the cursor regardless of whether the user name is available yet.
+          // This fixes the race condition.
           return (
-            <div key={userId} className="other-user-cursor-wrapper" style={{ left: position.x, top: position.y }}>
-              <div className="cursor-name-label">{userObj.displayName || userId}</div>
+            <div
+              key={userId}
+              className="other-user-cursor-wrapper"
+              style={{
+                position: "absolute",
+                left: position.x,
+                top: position.y,
+                zIndex: 1001, // Ensure cursors are on top
+                pointerEvents: "none",
+              }}
+            >
+              <div className="cursor-name-label">
+                {/* Fallback to showing a snippet of the userId if the full user object isn't in state yet */}
+                {userObj ? userObj.displayName : userId.substring(0, 6) + '...'}
+              </div>
               <div className="other-user-cursor"></div>
             </div>
           );
@@ -408,7 +471,7 @@ function BoardViewPage() {
             <div className="create-container-modal-content">
               <h3>Create New Container</h3>
               <CreateContainerForm
-                boardId={boardId}
+                boardId={boardId || SAMPLE_BOARD_ID}
                 onCreateSuccess={handleCreateContainer}
                 onCancel={() => setShowCreateContainerForm(false)}
                 loading={createContainerLoading}
