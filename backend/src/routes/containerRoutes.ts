@@ -16,7 +16,7 @@ type ContainerType = 'notes' | 'links' | 'drawing';
 interface ContainerData {
   id: string;
   boardId: string;
-  name: string;
+  title: string; // Use 'title' for consistency with frontend
   position: Position;
   size: Size;
   type: ContainerType;
@@ -25,10 +25,11 @@ interface ContainerData {
   ownerId: string; 
   
 }
+
 router.post('/', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
      const { boardId } = req.params;
 const {
-    name,
+    title,
     type, 
     position, 
     size, 
@@ -36,7 +37,7 @@ const {
   console.log(`[POST /api/boards/${boardId}/containers] Received type from req.body: "${type}"`);
   const user = req.user;
 
-  console.log(`[POST /api/boards/${boardId}/containers] Attempting to create container. User: ${user?.uid}, Name: ${name}, Type: ${type}`);
+  console.log(`[POST /api/boards/${boardId}/containers] Attempting to create container. User: ${user?.uid}, Name: ${title}, Type: ${type}`);
    
 
   if (!user) {
@@ -49,7 +50,7 @@ const {
     res.status(400).json({ error: 'Board ID parameter is required and must be a string.' });
     return;
   }
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  if (!title || typeof title !== 'string' || title.trim() === '') {
     res.status(400).json({ error: 'Container name is required and must be a non-empty string.' });
     return;
   }
@@ -80,7 +81,7 @@ const {
     const newContainer: ContainerData = {
       id: containerId,
       boardId: boardId,
-      name: name.trim(),
+      title: title.trim(), // Use 'title' for consistency with frontend
       type: type as ContainerType, // Cast to type after validation
       position: { x: position.x, y: position.y },
       size: { width: size.width, height: size.height },
@@ -88,6 +89,7 @@ const {
       updatedAt: now,
       ownerId: user.uid,
     };
+
     await firestore.collection('boards').doc(boardId).collection('containers').doc(containerId).set(newContainer);
     console.log(`[POST /api/boards/${boardId}/containers] Container created successfully: ${containerId}`);
     

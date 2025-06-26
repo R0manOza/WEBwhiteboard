@@ -38,7 +38,7 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
       // Data to send to the backend
 
       const containerDataForBackend = {
-        name: title.trim(), // Backend expects 'name'
+        title: title.trim(), // Backend expects 'name'
         type: purpose,      // Backend expects 'type'
         position: { x: Math.floor(Math.random() * 500) + 50, y: Math.floor(Math.random() * 200) + 50 }, // Random initial position
         size: {
