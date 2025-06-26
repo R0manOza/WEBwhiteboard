@@ -2,131 +2,202 @@
 .page.dashboard-page {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem 1rem; /* Added padding */
 }
 
-.create-board-btn {
-  background: #4f8cff;
-  color: #fff;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+/* Refined Create Board Button */
+button.create-board-btn { /* Use the base button style, override specific properties */
+  background: #4f8cff; /* Lighter blue for primary action */
+  border-color: #4f8cff;
+  /* Other styles from base button in App.css */
 }
-.create-board-btn:hover {
-  background: #2563eb;
+button.create-board-btn:hover:not(:disabled) {
+  background: #2563eb; /* Darker blue on hover */
+  border-color: #2563eb;
 }
+
 
 .board-list-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem; /* Increased space */
 }
 
 .board-card {
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  padding: 1.2rem 1rem 1rem 1rem;
+  border-radius: 8px; /* Smaller radius */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* Softer shadow */
+  padding: 1.5rem; /* Increased padding */
   min-width: 240px;
   max-width: 320px;
-  flex: 1 1 260px;
+  flex: 1 1 280px; /* Slightly larger base size */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s ease, transform 0.2s ease; /* Add subtle transform */
+  border: 1px solid #e1dfdd; /* Add a light border */
 }
 .board-card:hover {
-  box-shadow: 0 4px 20px rgba(79, 140, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(79,140,255,0.1); /* More prominent shadow on hover */
+  transform: translateY(-3px); /* Lift effect on hover */
 }
 
 .board-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  margin-bottom: 0.75rem; /* Space between header and body */
+  gap: 1rem; /* Space between title and actions */
 }
 .board-title {
-  font-size: 1.2rem;
+  font-size: 1.3rem; /* Slightly larger title */
   font-weight: 600;
-  color: #222;
+  color: #1f2937; /* Darker title color */
+  word-break: break-word; /* Prevent title overflow */
 }
 .board-card-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
-.edit-btn,
-.delete-btn,
-.open-btn {
-  border: none;
-  border-radius: 5px;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.95rem;
+/* Refine action buttons within card */
+.board-card-actions .edit-btn,
+.board-card-actions .delete-btn {
+  border: 1px solid #d1d5db; /* Light border */
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem; /* Adjusted padding */
+  font-size: 0.9rem;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    color 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  background: none; /* Remove default backgrounds */
 }
-.edit-btn {
-  background: #f1f5ff;
+.board-card-actions .edit-btn {
   color: #2563eb;
+  border-color: #2563eb; /* Use brand color border */
 }
-.edit-btn:hover {
+.board-card-actions .edit-btn:hover {
   background: #2563eb;
   color: #fff;
 }
-.delete-btn {
-  background: #fff0f0;
+.board-card-actions .delete-btn {
   color: #e11d48;
+  border-color: #e11d48; /* Use danger color border */
 }
-.delete-btn:hover {
+.board-card-actions .delete-btn:hover {
   background: #e11d48;
   color: #fff;
 }
-.open-btn {
+/* Open Button - inherit base button style */
+.board-card button.open-btn {
   background: #4f8cff;
-  color: #fff;
+  border-color: #4f8cff;
+  width: 100%; /* Make it full width */
   margin-top: 1rem;
+  /* Other styles from base button */
 }
-.open-btn:hover {
-  background: #2563eb;
+.board-card button.open-btn:hover {
+   background: #2563eb;
+   border-color: #2563eb;
 }
+
+
 .board-card-body {
-  margin-top: 0.7rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0; /* Adjusted margin */
+  margin-bottom: 1rem; /* Space before open button */
+  flex-grow: 1; /* Allow body to take space */
 }
 .board-description {
   color: #555;
-  font-size: 0.98rem;
-  margin-bottom: 0.3rem;
+  font-size: 1rem; /* Standard font size */
+  margin-bottom: 0.5rem; /* Space below description */
+  word-break: break-word;
 }
 .board-visibility {
   color: #888;
-  font-size: 0.92rem;
+  font-size: 0.9rem; /* Slightly smaller */
 }
 
 /* Modal overlay */
+/* Use consistent modal styles */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4); /* Slightly darker overlay */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem; /* Add padding for small screens */
 }
 .modal-form {
   background: #fff;
-  padding: 2rem 1.5rem;
-  border-radius: 10px;
+  padding: 1.5rem; /* Adjusted padding */
+  border-radius: 8px; /* Consistent radius */
   min-width: 320px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.13);
+  max-width: 400px; /* Cap width */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15); /* More prominent shadow */
+  width: 100%; /* Ensure it respects max-width */
+  box-sizing: border-box; /* Include padding */
 }
+.modal-form h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem; /* Space below title */
+    font-size: 1.5rem;
+    color: #1f2937;
+}
+
+/* Form group styles within modal */
+.modal-form div { /* Target direct children divs for form groups */
+    margin-bottom: 1rem;
+}
+
+.modal-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+.modal-form input[type="text"],
+.modal-form select {
+    width: 100%;
+    padding: 0.6rem 0.8rem; /* Adjusted padding */
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.modal-form input[type="text"]:focus,
+.modal-form select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); /* Softer focus ring */
+}
+
+.modal-form .form-actions { /* Style for button container */
+    display: flex;
+    gap: 0.75rem; /* Adjusted gap */
+    margin-top: 1.5rem; /* Space above buttons */
+    justify-content: flex-end; /* Align buttons to the right */
+}
+
+.modal-form button[type="submit"] { /* Primary button */
+   /* Inherits base button style */
+}
+.modal-form button[type="button"] { /* Cancel button */
+   /* Inherits base button style */
+   background-color: #fff; /* White background */
+   color: #323130; /* Dark text */
+   border-color: #d1d5db; /* Light border */
+}
+.modal-form button[type="button"]:hover:not(:disabled) {
+   background-color: #f3f2f1; /* Light grey hover */
+   border-color: #c8c6c4; /* Slightly darker border */
+}
+
 
 @media (max-width: 600px) {
   .board-list-cards {
@@ -137,7 +208,18 @@
     min-width: 0;
     max-width: 100%;
   }
-  .modal-form {
-    min-width: 90vw;
+  .modal-overlay {
+     padding: 0.5rem; /* Less padding on very small screens */
   }
+  .modal-form {
+    min-width: 95vw; /* Take more width on small screens */
+    max-width: 95vw;
+  }
+   .modal-form .form-actions {
+        flex-direction: column-reverse; /* Stack buttons on small screens */
+        gap: 0.5rem;
+   }
+   .modal-form .form-actions button {
+        width: 100%; /* Full width buttons */
+   }
 }

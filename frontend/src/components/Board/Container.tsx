@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Container as ContainerType } from '../../../../shared/types';
+import type { Container as ContainerType, NoteItem, LinkItem } from '../../../../shared/types';
 import ContainerDrawing from './ContainerDrawing';
+import NoteItem from '../Items/NoteItem';
+import LinkItem from '../Items/LinkItem';
+import CreateItemForm from '../Items/CreateItemForm';
 
 interface ContainerProps {
   container: ContainerType;
@@ -8,12 +11,6 @@ interface ContainerProps {
   onSizeChange?: (containerId: string, newSize: { width: number; height: number }) => void;
   onDelete?: (containerId: string) => void;
   canvasBounds?: { width: number; height: number };
-}
-
-interface LinkItem {
-  id: string;
-  url: string;
-  title: string;
 }
 
 const Container: React.FC<ContainerProps> = ({ 
@@ -28,14 +25,15 @@ const Container: React.FC<ContainerProps> = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
-  // Link state
+  // Items state
+  const [notes, setNotes] = useState<NoteItem[]>([]);
   const [links, setLinks] = useState<LinkItem[]>([]);
-  const [urlInput, setUrlInput] = useState('');
-  const [titleInput, setTitleInput] = useState('');
   
   // Drawing state for notes containers
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [notesText, setNotesText] = useState('');
+  
+  // Item creation state
+  const [showCreateItemForm, setShowCreateItemForm] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -71,24 +69,50 @@ const Container: React.FC<ContainerProps> = ({
     e.stopPropagation();
   };
 
-  // Handle adding a link
-  const handleAddLink = () => {
-    if (!urlInput.trim()) return;
-    
-    const newLink: LinkItem = {
-      id: `link-${Date.now()}`,
-      url: urlInput.trim(),
-      title: titleInput.trim() || urlInput.trim()
-    };
-    
-    setLinks(prev => [...prev, newLink]);
-    setUrlInput('');
-    setTitleInput('');
+  // Handle creating a new item
+  const handleCreateItem = (newItem: NoteItem | LinkItem) => {
+    if (container.purpose === 'notes') {
+      setNotes(prev => [...prev, newItem as NoteItem]);
+    } else {
+      setLinks(prev => [...prev, newItem as LinkItem]);
+    }
+    setShowCreateItemForm(false);
+  };
+
+  // Handle updating a note
+  const handleUpdateNote = async (itemId: string, updates: Partial<NoteItem>) => {
+    setNotes(prev => 
+      prev.map(note => 
+        note.id === itemId 
+          ? { ...note, ...updates, updatedAt: Date.now() }
+          : note
+      )
+    );
+    // TODO: Call API to update note
+  };
+
+  // Handle updating a link
+  const handleUpdateLink = async (itemId: string, updates: Partial<LinkItem>) => {
+    setLinks(prev => 
+      prev.map(link => 
+        link.id === itemId 
+          ? { ...link, ...updates, updatedAt: Date.now() }
+          : link
+      )
+    );
+    // TODO: Call API to update link
+  };
+
+  // Handle deleting a note
+  const handleDeleteNote = async (itemId: string) => {
+    setNotes(prev => prev.filter(note => note.id !== itemId));
+    // TODO: Call API to delete note
   };
 
   // Handle deleting a link
-  const handleDeleteLink = (linkId: string) => {
-    setLinks(prev => prev.filter(link => link.id !== linkId));
+  const handleDeleteLink = async (itemId: string) => {
+    setLinks(prev => prev.filter(link => link.id !== itemId));
+    // TODO: Call API to delete link
   };
 
   // Handle mouse move for dragging
@@ -176,7 +200,7 @@ const Container: React.FC<ContainerProps> = ({
       onMouseDown={handleMouseDown}
     >
       {/* Container Header */}
-      <div 
+      <div
         className="container-header"
         style={{
           padding: '12px 16px',
@@ -226,7 +250,29 @@ const Container: React.FC<ContainerProps> = ({
             {isDrawingMode ? "📝" : "✏️"}
           </button>
         )}
+
+        {/* Add item button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowCreateItemForm(true);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontSize: '12px',
+            marginRight: '8px',
+          }}
+          title={`Add ${container.purpose === 'notes' ? 'Note' : 'Link'}`}
+        >
+          ➕
+        </button>
         
+        {/* Delete container button */}
         {onDelete && (
           <button
             onClick={(e) => {
@@ -273,152 +319,68 @@ const Container: React.FC<ContainerProps> = ({
               className="container-drawing-canvas"
             />
           ) : (
-            <textarea
-              placeholder="Write your notes here..."
-              value={notesText}
-              onChange={(e) => setNotesText(e.target.value)}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                resize: 'none',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                color: '#374151',
-                fontFamily: 'inherit',
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-            />
-          )
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
-            {/* Add Link Form */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-              <input
-                type="url"
-                placeholder="Enter URL (e.g., https://example.com)"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  outline: 'none',
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-              <input
-                type="text"
-                placeholder="Link title (optional)"
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  outline: 'none',
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-              <button
-                onClick={handleAddLink}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                Add Link
-              </button>
-            </div>
-
-            {/* Links List */}
-            <div style={{ 
-              borderTop: '1px solid #e5e7eb', 
-              paddingTop: '8px',
-              marginTop: '8px',
-              flex: 1,
-              overflow: 'auto',
-              minHeight: '60px'
-            }}>
-              {links.length === 0 ? (
+            <div>
+              {notes.length === 0 ? (
                 <div style={{ 
                   textAlign: 'center', 
                   color: '#9ca3af', 
-                  fontSize: '11px',
+                  fontSize: '13px', 
                   fontStyle: 'italic',
                   padding: '20px 0'
                 }}>
-                  No links yet. Add your first link above!
+                  No notes yet. Click ➕ to add one!
                 </div>
               ) : (
-                <div style={{ fontSize: '11px' }}>
-                  <div style={{ 
-                    fontWeight: '600', 
-                    color: '#374151', 
-                    marginBottom: '8px',
-                    fontSize: '12px'
-                  }}>
-                    Links ({links.length}):
-                  </div>
-                  {links.map(link => (
-                    <div key={link.id} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '6px',
-                      padding: '4px 0',
-                      borderBottom: '1px solid #f3f4f6'
-                    }}>
-                      <a 
-                        href={link.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ 
-                          color: '#2563eb', 
-                          textDecoration: 'none',
-                          flex: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          fontSize: '11px'
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        {link.title}
-                      </a>
-                      <button
-                        onClick={() => handleDeleteLink(link.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#ef4444',
-                          fontSize: '10px',
-                          padding: '2px',
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                notes.map(note => (
+                  <NoteItem
+                    key={note.id}
+                    item={note}
+                    onUpdate={handleUpdateNote}
+                    onDelete={handleDeleteNote}
+                  />
+                ))
               )}
             </div>
+          )
+        ) : (
+          <div>
+            {links.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                color: '#9ca3af', 
+                fontSize: '13px', 
+                fontStyle: 'italic',
+                padding: '20px 0'
+              }}>
+                No links yet. Click ➕ to add one!
+              </div>
+            ) : (
+              links.map(link => (
+                <LinkItem
+                  key={link.id}
+                  item={link}
+                  onUpdate={handleUpdateLink}
+                  onDelete={handleDeleteLink}
+                />
+              ))
+            )}
           </div>
         )}
       </div>
+
+      {/* Create Item Form Modal */}
+      {showCreateItemForm && (
+        <div className="create-item-modal">
+          <div className="create-item-modal-content">
+            <CreateItemForm
+              containerId={container.id}
+              containerPurpose={container.purpose}
+              onCreateSuccess={handleCreateItem}
+              onCancel={() => setShowCreateItemForm(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Resize Handle */}
       <div

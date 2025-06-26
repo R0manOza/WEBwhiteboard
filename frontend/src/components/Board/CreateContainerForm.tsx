@@ -1,57 +1,47 @@
 import React, { useState } from 'react';
+// Import ContainerPurpose type
 import type { ContainerPurpose } from '../../../../shared/types';
 
 interface CreateContainerFormProps {
-  boardId: string;
-  onCreateSuccess?: (container: any) => void;
+  boardId: string; // The ID of the board the container is for
+  // Updated signature to pass form data object
+  onCreateSuccess?: (formData: { title: string; purpose: ContainerPurpose }) => void;
   onCancel?: () => void;
+  // Added loading and error props for API call feedback
+  loading?: boolean;
+  error?: string | null;
 }
 
-const CreateContainerForm: React.FC<CreateContainerFormProps> = ({ 
-  boardId, 
-  onCreateSuccess, 
-  onCancel 
+const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
+  boardId, // Keep boardId prop if needed for local logic (e.g., default position calc)
+  onCreateSuccess,
+  onCancel,
+  loading = false, // Default to false
+  error = null,    // Default to null
 }) => {
   const [title, setTitle] = useState('');
-  const [purpose, setPurpose] = useState<ContainerPurpose>('notes');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState<ContainerPurpose>('notes'); // Use imported type
+  // Removed internal loading/error state, now controlled by props from parent
 
-  const handleSubmit = async (e: React.FormEvent) => {
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Title is required');
-      return;
+      // Use parent error state or handle validation visually
+      // For now, simple validation message (could improve UI later)
+       alert('Title is required');
+       return;
     }
 
-    setLoading(true);
-    setError(null);
+    // Call the parent-provided function to handle the actual creation (API call)
+    // Pass the necessary form data
+    onCreateSuccess?.({ title: title.trim(), purpose });
 
-    try {
-      // For now, we'll create a container with default position and size
-      // Later we'll integrate with the backend
-      const newContainer = {
-        id: `temp-${Date.now()}`,
-        boardId,
-        title: title.trim(),
-        purpose,
-        position: { x: 100, y: 100 },
-        size: { 
-          width: 300, 
-          height: purpose === 'links' ? 300 : 200 // Make links containers taller
-        },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      onCreateSuccess?.(newContainer);
-      setTitle('');
-      setPurpose('notes');
-    } catch (err: any) {
-      setError(err.message || 'Failed to create container');
-    } finally {
-      setLoading(false);
-    }
+    // Note: Resetting form fields here is okay. The parent handles closing the modal
+    // and displaying loading/error states based on the API call outcome.
+    // If you wanted to keep the form open on error, you wouldn't reset here.
+    setTitle('');
+    setPurpose('notes');
   };
 
   return (
@@ -66,13 +56,14 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter container title..."
             required
-            disabled={loading}
+            disabled={loading} // Use loading prop
             style={{
-              width: '100%',
+              width: '100%', /* Fixed width */
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
+              boxSizing: 'border-box', /* Added for padding */
             }}
           />
         </div>
@@ -82,15 +73,16 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
           <select
             id="container-purpose"
             value={purpose}
-            onChange={(e) => setPurpose(e.target.value as ContainerPurpose)}
+            onChange={(e) => setPurpose(e.target.value as ContainerPurpose)} // Cast value to type
             required
-            disabled={loading}
-            style={{
-              width: '100%',
+            disabled={loading} // Use loading prop
+             style={{
+              width: '100%', /* Fixed width */
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
+              boxSizing: 'border-box', /* Added for padding */
             }}
           >
             <option value="notes">📝 Notes</option>
@@ -98,20 +90,21 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
           </select>
         </div>
 
+        {/* Display error from parent prop */}
         {error && (
           <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '8px' }}>
-            {error}
+            Error: {error}
           </div>
         )}
 
-        <div className="form-actions" style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          marginTop: '16px' 
+        <div className="form-actions" style={{
+          display: 'flex',
+          gap: '8px',
+          marginTop: '16px'
         }}>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading} // Use loading prop
             style={{
               padding: '8px 16px',
               backgroundColor: '#2563eb',
@@ -125,12 +118,12 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
           >
             {loading ? 'Creating...' : 'Create Container'}
           </button>
-          
+
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              disabled={loading}
+              disabled={loading} // Use loading prop
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#f3f4f6',
@@ -150,4 +143,4 @@ const CreateContainerForm: React.FC<CreateContainerFormProps> = ({
   );
 };
 
-export default CreateContainerForm; 
+export default CreateContainerForm;
