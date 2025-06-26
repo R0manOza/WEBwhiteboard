@@ -5,16 +5,17 @@ import {
   type IdTokenResult,
   onAuthStateChanged,
 } from "firebase/auth"; // <-- ADDED onAuthStateChanged
-import React, { useState, useEffect } from "react";
+import //React, 
+{ useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase/config";
 
-interface BackendUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-}
+// interface BackendUser {
+//   uid: string;
+//   email: string | null;
+//   displayName: string | null;
+//   photoURL: string | null;
+// }
 
 function LoginPage() {
   console.log("[LoginPage] Component Rendered/Re-rendered"); // Log 0

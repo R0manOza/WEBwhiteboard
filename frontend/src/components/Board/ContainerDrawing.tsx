@@ -36,7 +36,7 @@ const ContainerDrawing: React.FC<ContainerDrawingProps> = ({
     otherUserStrokes: {}
   });
 
-  const [drawingSettings, setDrawingSettings] = useState({
+  const [drawingSettings] = useState({
     color: '#000000',
     brushSize: 2,
     opacity: 1
@@ -111,7 +111,7 @@ const ContainerDrawing: React.FC<ContainerDrawingProps> = ({
     const context = getCanvasContext();
     if (!context) return;
     
-    const { canvas, ctx } = context;
+    const { canvas } = context;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;

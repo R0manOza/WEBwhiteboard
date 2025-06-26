@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
@@ -19,6 +20,7 @@ interface CursorPosition {
 }
 
 const SAMPLE_BOARD_ID = 'sample-solo-board';
+
 
 const sampleBoardData: Board = {
   id: SAMPLE_BOARD_ID,

@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './DashboardPage.css'; // Add this for custom styles
+
 
 // Define a basic type for a board based on your shared types
 interface SimpleBoard {
@@ -16,6 +18,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState(''); // New state for the search term
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -161,12 +164,40 @@ function DashboardPage() {
       setDeleteLoading(null);
     }
   };
+  const filteredBoards = useMemo(() => {
+  if (!searchTerm.trim()) {
+    return boards; 
+  }
+  const lowercasedSearchTerm = searchTerm.toLowerCase();
+  return boards.filter(board =>
+    (board.name.toLowerCase().includes(lowercasedSearchTerm)) ||
+    (board.description && board.description.toLowerCase().includes(lowercasedSearchTerm))
+    
+  );
+}, [boards, searchTerm]); 
 
   // Render logic based on state
   return (
     <div className="page dashboard-page"> {/* Use existing CSS class */}
       <h1>Your Boards</h1>
-      <button className="create-board-btn" onClick={() => setShowCreateModal(true)} style={{ marginBottom: '1rem' }}>Create Board</button>
+
+      <div className="dashboard-actions" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <input
+        type="text"
+        placeholder="Search boards by name or description..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={{ padding: '0.5rem', fontSize: '1rem', width: '300px', marginRight: '1rem' }}
+      />
+      </div>
+      <button
+        className="create-board-btn"
+        onClick={() => setShowCreateModal(true)}
+        style={{ marginBottom: "1rem" }}
+      >
+        Create Board
+      </button>
+
       {showCreateModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <form onSubmit={handleCreateBoard} style={{ background: '#fff', padding: 24, borderRadius: 8, minWidth: 300 }}>
@@ -222,13 +253,23 @@ function DashboardPage() {
         </div>
       )}
       {loading && <p>Loading boards...</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-      {!loading && !error && boards.length === 0 && (
-        <p>No boards found. Create one!</p>
-      )}
-      {!loading && !error && boards.length > 0 && (
+
+      {error && <p style={{ color: "red" }}>Error: {error}</p>}
+      {!loading && !error && (
+      <>
+        {/* Case 1: No boards fetched initially AND no search term active */}
+        {boards.length === 0 && !searchTerm.trim() && (
+          <p>No boards found. Create one!</p>
+        )}
+        {/* Case 2: No boards match the search term */}
+        {boards.length > 0 && filteredBoards.length === 0 && searchTerm.trim() && (
+          <p>No boards match your search term "{searchTerm}".</p>
+        )}
+        {/* Case 3: There are boards to display (either all boards, or filtered results) */}
+       {filteredBoards.length > 0 &&(
+
         <div className="board-list-cards">
-          {boards.map((board) => (
+          {filteredBoards.map((board) =>  (
             <div className="board-card" key={board.id}>
               <div className="board-card-header">
                 <span className="board-title">{board.name}</span>
@@ -245,6 +286,8 @@ function DashboardPage() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );
