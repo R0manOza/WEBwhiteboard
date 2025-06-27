@@ -76,31 +76,52 @@ router.post('/logout', verifyTokenMiddleware, async (req: AuthenticatedRequest, 
   res.status(200).json({ message: 'Logout acknowledged.' });
 });
 router.get('/userInfo', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response) => {
-    const uid = req.user?.uid;
+    // Check if a specific UID is requested via query parameter
+    const requestedUid = req.query.uid as string;
+    const uid = requestedUid || req.user?.uid;
+    
+    console.log('🔍 /api/auth/userInfo called');
+    console.log('🔍 Full query object:', req.query);
+    console.log('🔍 Requested UID:', requestedUid);
+    console.log('🔍 Current user UID:', req.user?.uid);
+    console.log('🔍 Final UID to fetch:', uid);
+    console.log('🔍 Requested UID type:', typeof requestedUid);
+    console.log('🔍 Requested UID length:', requestedUid?.length);
+    
     if (!uid) {
+        console.log('🔍 No UID provided, returning 400');
         res.status(400).json({ error: 'User ID is required' });
         return;
     }
+    
     try {
+        console.log('🔍 Fetching user from Firestore with UID:', uid);
         const userRef = firestore.collection('users').doc(uid);
         const userSnapshot = await userRef.get();
 
         if (!userSnapshot.exists) {
+            console.log('🔍 User not found in Firestore:', uid);
             res.status(404).json({ error: 'User not found' });
             return;
         }
 
         const userData = userSnapshot.data();
-        res.status(200).json({
+        console.log('🔍 User data found:', userData);
+        console.log('🔍 User displayName:', userData?.displayName);
+        
+        const response = {
             uid: userData?.uid,
             email: userData?.email,
             displayName: userData?.displayName,
             photoURL: userData?.photoURL,
             createdAt: userData?.createdAt,
             lastLoginAt: userData?.lastLoginAt,
-        });
+        };
+        
+        console.log('🔍 Sending response:', response);
+        res.status(200).json(response);
     } catch (error) {
-        console.error('Error fetching user info:', error);
+        console.error('🔍 Error fetching user info:', error);
         res.status(500).json({ error: 'Failed to fetch user info' });
     }
 });

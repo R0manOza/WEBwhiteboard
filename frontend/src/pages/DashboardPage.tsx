@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './DashboardPage.css'; // Add this for custom styles
@@ -11,6 +11,11 @@ interface SimpleBoard {
   description?: string;
   visibility?: string;
   ownerId: string;
+}
+
+// Add interface for owner names mapping
+interface OwnerNames {
+  [ownerId: string]: string;
 }
 
 function DashboardPage() {
@@ -30,6 +35,46 @@ function DashboardPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // board id being deleted
   const [boardFilter, setBoardFilter] = useState<'all' | 'public' | 'private'>('all');
+  const [ownerNames, setOwnerNames] = useState<OwnerNames>({}); // New state for owner names
+
+  const fetchOwnerNames = useCallback(async (boardsData: SimpleBoard[], token: string) => {
+    console.log('🔍 fetchOwnerNames called with boards:', boardsData);
+    const uniqueOwnerIds = [...new Set(boardsData.map(board => board.ownerId))];
+    console.log('🔍 Unique owner IDs:', uniqueOwnerIds);
+    const ownerNamesMap: OwnerNames = {};
+    
+    // Fetch owner names for each unique owner ID
+    for (const ownerId of uniqueOwnerIds) {
+      try {
+        console.log(`🔍 Processing owner ID: ${ownerId}, current user UID: ${user?.uid}`);
+        // If it's the current user, use their display name
+        if (ownerId === user?.uid) {
+          ownerNamesMap[ownerId] = user.displayName || 'Me';
+          console.log(`🔍 Current user board - setting to: ${ownerNamesMap[ownerId]}`);
+        } else {
+          console.log(`🔍 Fetching user info for UID: ${ownerId}`);
+          const response = await fetch(`/api/auth/userInfo?uid=${ownerId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const userInfo = await response.json();
+            ownerNamesMap[ownerId] = userInfo.displayName || 'Unknown';
+            console.log(`🔍 Fetched user info for ${ownerId}:`, userInfo);
+            console.log(`🔍 Setting display name to: ${ownerNamesMap[ownerId]}`);
+          } else {
+            ownerNamesMap[ownerId] = 'Unknown';
+            console.log(`🔍 Failed to fetch user info for ${ownerId}, setting to Unknown`);
+          }
+        }
+      } catch (error) {
+        console.error(`🔍 Failed to fetch owner name for ${ownerId}:`, error);
+        ownerNamesMap[ownerId] = 'Unknown';
+      }
+    }
+    
+    console.log('🔍 Final owner names map:', ownerNamesMap);
+    setOwnerNames(ownerNamesMap);
+  }, [user]);
 
   useEffect(() => {
     const fetchBoards = async () => {
@@ -49,6 +94,9 @@ function DashboardPage() {
         }
         const data = await response.json();
         setBoards(data);
+        
+        // Fetch owner names for all boards
+        await fetchOwnerNames(data, token);
       } catch (err: any) {
         setError(err.message || 'Failed to load boards.');
       } finally {
@@ -56,7 +104,7 @@ function DashboardPage() {
       }
     };
     if (user) fetchBoards();
-  }, [user]);
+  }, [user, fetchOwnerNames]);
 
   // This is a test to see if the user is authenticated
   useEffect(() => {
@@ -66,6 +114,22 @@ function DashboardPage() {
       });
     }
   }, [user]);
+
+  // Helper function to get owner display name
+  const getOwnerDisplayName = useCallback((ownerId: string): string => {
+    console.log(`🎯 getOwnerDisplayName called for ownerId: ${ownerId}`);
+    console.log(`🎯 Current user UID: ${user?.uid}`);
+    console.log(`🎯 Current ownerNames state:`, ownerNames);
+    
+    if (ownerId === user?.uid) {
+      const result = user.displayName || 'Me';
+      console.log(`🎯 Current user board - returning: ${result}`);
+      return result;
+    }
+    const result = ownerNames[ownerId] || 'Unknown';
+    console.log(`🎯 Other user board - returning: ${result}`);
+    return result;
+  }, [user, ownerNames]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +156,8 @@ function DashboardPage() {
       setForm({ name: '', description: '', visibility: 'public' });
       // Refresh board list
       setBoards(prev => [...prev, data]);
+      // Fetch owner names for the new board
+      await fetchOwnerNames([data], token);
       // Optionally redirect to the new board
       navigate(`/board/${data.id}`);
     } catch (err: any) {
@@ -449,7 +515,7 @@ function DashboardPage() {
               </div>
               <div className="board-card-body">
                 <div className="board-description">{board.description}</div>
-                <div className="board-owner"><b>Owner:</b> {board.ownerId || 'Unknown'}</div>
+                <div className="board-owner"><b>Owner:</b> {getOwnerDisplayName(board.ownerId)}</div>
                 <div className="board-visibility">Visibility: {board.visibility}</div>
               </div>
               <button className="open-btn" onClick={() => navigate(`/board/${board.id}`)}>Open Board</button>
