@@ -27,6 +27,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const { socket, isConnected } = useSocket(boardId);
   const { user } = useAuth();
   
+  const [isEraserMode, setIsEraserMode] = useState(false);
+
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
     currentStroke: null,
@@ -110,29 +112,27 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   // Draw a single stroke
   const drawStroke = useCallback((ctx: CanvasRenderingContext2D, stroke: DrawingStroke) => {
     if (stroke.points.length < 2) {
-      console.log('DrawingCanvas: Stroke has less than 2 points, skipping');
       return;
     }
-    
-    console.log('DrawingCanvas: Drawing stroke with', stroke.points.length, 'points, color:', stroke.color, 'brushSize:', stroke.brushSize);
-    
     ctx.save();
-    ctx.strokeStyle = stroke.color;
+    if (stroke.color === 'ERASER') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+    }
     ctx.lineWidth = stroke.brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.globalAlpha = stroke.opacity;
-    
     ctx.beginPath();
     ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-    
     for (let i = 1; i < stroke.points.length; i++) {
       ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
     }
-    
     ctx.stroke();
     ctx.restore();
-    console.log('DrawingCanvas: Stroke drawn successfully');
   }, []);
 
   // Handle mouse down - start drawing
@@ -150,15 +150,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       boardId,
       userId: user.uid,
       points: [{ x: world.x, y: world.y, timestamp: Date.now() }],
-      color: drawingSettings.color,
+      color: isEraserMode ? 'ERASER' : drawingSettings.color,
       brushSize: drawingSettings.brushSize,
       opacity: drawingSettings.opacity,
       createdAt: Date.now()
     };
     setDrawingState(prev => ({ ...prev, isDrawing: true, currentStroke: newStroke }));
     socket?.emit('drawingStatus', { boardId, isDrawing: true });
-    socket?.emit('strokeStart', { boardId, strokeId: newStroke.id, color: drawingSettings.color, brushSize: drawingSettings.brushSize, opacity: drawingSettings.opacity });
-  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket, screenToWorld]);
+    socket?.emit('strokeStart', { boardId, strokeId: newStroke.id, color: newStroke.color, brushSize: newStroke.brushSize, opacity: newStroke.opacity });
+  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket, screenToWorld, isEraserMode]);
 
   // Handle mouse move - continue drawing
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -357,7 +357,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         type="color"
         value={drawingSettings.color}
         onChange={(e) => setDrawingSettings(prev => ({ ...prev, color: e.target.value }))}
-        style={{ width: '30px', height: '30px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        style={{ width: '30px', height: '30px', border: 'none', borderRadius: '4px', cursor: isEraserMode ? 'not-allowed' : 'pointer', opacity: isEraserMode ? 0.5 : 1 }}
+        disabled={isEraserMode}
       />
       <input
         type="range"
@@ -370,6 +371,22 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       <span style={{ fontSize: '12px', color: '#666' }}>
         {drawingSettings.brushSize}px
       </span>
+      <button
+        onClick={() => setIsEraserMode(em => !em)}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: isEraserMode ? '#2563eb' : '#e5e7eb',
+          color: isEraserMode ? 'white' : '#222',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          fontWeight: 600
+        }}
+        title={isEraserMode ? 'Switch to Pen' : 'Switch to Eraser'}
+      >
+        <span role="img" aria-label="eraser">🧽</span> {isEraserMode ? 'Eraser (On)' : 'Eraser'}
+      </button>
       <button
         onClick={handleUndo}
         style={{
@@ -499,12 +516,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
   // Pan/zoom handlers
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const handleWheel = (e: WheelEvent) => {
-      if (!canvasRef.current) return;
       e.preventDefault();
-      const { left, top } = canvasRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - left;
-      const mouseY = e.clientY - top;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
       const worldPos = screenToWorld(mouseX, mouseY);
       let newScale = viewport.scale * (e.deltaY < 0 ? 1.1 : 0.9);
       newScale = Math.max(0.1, Math.min(10, newScale));
@@ -513,21 +531,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       const newOffsetY = mouseY - worldPos.y * newScale;
       setViewport(v => ({ ...v, scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY }));
     };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') spacePressedRef.current = true;
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') spacePressedRef.current = false;
-    };
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      canvas.removeEventListener('wheel', handleWheel);
     };
-  }, [viewport.scale, viewport.offsetX, viewport.offsetY]);
+  }, [viewport.scale, viewport.offsetX, viewport.offsetY, screenToWorld]);
 
   // Pan logic
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
