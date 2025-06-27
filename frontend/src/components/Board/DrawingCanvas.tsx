@@ -84,9 +84,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   // Add pan mode toggle for button
   const [panMode, setPanMode] = useState(false);
 
-  // Add eraser mode toggle for button
-  const [isEraserMode, setIsEraserMode] = useState(false);
-
   // Pan mode effect (button toggles spacePressedRef)
   useEffect(() => {
     spacePressedRef.current = panMode;
@@ -466,9 +463,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       borderRadius: '8px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
       display: 'flex',
+      flexDirection: 'row',
       gap: '8px',
       alignItems: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      minWidth: 400
     }}>
       <div
         ref={colorButtonRef}
@@ -486,102 +485,104 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           display: 'inline-block',
         }}
         onClick={() => setColorPickerOpen((v) => !v)}
-        title="Choose color">
-      {colorPickerOpen && !isEraserMode && (
-        <div
-          style={{
-            position: 'absolute',
-            zIndex: 2000,
-            top: 46,
-            left: 0,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            background: 'white',
-            borderRadius: 8,
-            padding: 12,
-            minWidth: 200
-          }}
-          tabIndex={-1}
-        >
-          {/* Color preview swatch */}
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-            background: drawingSettings.color,
-            border: '2px solid #2563eb',
-            margin: '0 auto 12px auto',
-            boxShadow: '0 2px 8px #0002'
-          }} />
-          <div style={{ marginBottom: 12, position: 'relative', width: spectrumSize, height: spectrumSize }}>
-            {/* Canvas first, then handle */}
-            <canvas
-              ref={spectrumRef}
-              width={spectrumSize}
-              height={spectrumSize}
-              style={{ borderRadius: 8, cursor: 'crosshair', width: spectrumSize, height: spectrumSize, display: 'block', border: '2px solid #eee' }}
-              onPointerDown={e => {
-                handleSpectrumPointer(e);
-                const move = (ev: PointerEvent) => handleSpectrumPointer({ ...e, clientX: ev.clientX, clientY: ev.clientY } as any);
-                const up = () => {
-                  window.removeEventListener('pointermove', move);
-                  window.removeEventListener('pointerup', up);
-                };
-                window.addEventListener('pointermove', move);
-                window.addEventListener('pointerup', up);
-              }}
-            />
-            {/* Draggable circle */}
-            <div
-              style={{
-                position: 'absolute',
-                left: `${sat * (spectrumSize - 1) - 10}px`,
-                top: `${(1 - val) * (spectrumSize - 1) - 10}px`,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                border: '3px solid #fff',
-                boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
-                background: drawingSettings.color,
-                pointerEvents: 'none',
-              }}
-            />
+        title="Choose color"
+      >
+        {colorPickerOpen && !isEraserMode && (
+          <div
+            style={{
+              position: 'absolute',
+              zIndex: 2000,
+              top: 46,
+              left: 0,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              background: 'white',
+              borderRadius: 8,
+              padding: 12,
+              minWidth: 200
+            }}
+            tabIndex={-1}
+          >
+            {/* Color preview swatch */}
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 8,
+              background: drawingSettings.color,
+              border: '2px solid #2563eb',
+              margin: '0 auto 12px auto',
+              boxShadow: '0 2px 8px #0002'
+            }} />
+            <div style={{ marginBottom: 12, position: 'relative', width: spectrumSize, height: spectrumSize }}>
+              {/* Canvas first, then handle */}
+              <canvas
+                ref={spectrumRef}
+                width={spectrumSize}
+                height={spectrumSize}
+                style={{ borderRadius: 8, cursor: 'crosshair', width: spectrumSize, height: spectrumSize, display: 'block', border: '2px solid #eee' }}
+                onPointerDown={e => {
+                  handleSpectrumPointer(e);
+                  const move = (ev: PointerEvent) => handleSpectrumPointer({ ...e, clientX: ev.clientX, clientY: ev.clientY } as any);
+                  const up = () => {
+                    window.removeEventListener('pointermove', move);
+                    window.removeEventListener('pointerup', up);
+                  };
+                  window.addEventListener('pointermove', move);
+                  window.addEventListener('pointerup', up);
+                }}
+              />
+              {/* Draggable circle */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${sat * (spectrumSize - 1) - 10}px`,
+                  top: `${(1 - val) * (spectrumSize - 1) - 10}px`,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  border: '3px solid #fff',
+                  boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
+                  background: drawingSettings.color,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 8, position: 'relative', width: hueBarWidth, height: hueBarHeight }}>
+              <canvas
+                ref={hueBarRef}
+                width={hueBarWidth}
+                height={hueBarHeight}
+                style={{ borderRadius: 4, cursor: 'pointer', width: hueBarWidth, height: hueBarHeight, border: '2px solid #eee', display: 'block' }}
+                onPointerDown={e => {
+                  handleHuePointer(e);
+                  const move = (ev: PointerEvent) => handleHuePointer({ ...e, clientX: ev.clientX } as any);
+                  const up = () => {
+                    window.removeEventListener('pointermove', move);
+                    window.removeEventListener('pointerup', up);
+                  };
+                  window.addEventListener('pointermove', move);
+                  window.addEventListener('pointerup', up);
+                }}
+              />
+              {/* Draggable hue handle */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${(hue / 360) * (hueBarWidth - 1) - 8}px`,
+                  top: '-4px',
+                  width: 16,
+                  height: 24,
+                  borderRadius: 8,
+                  border: '3px solid #fff',
+                  boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
+                  background: `hsl(${hue},100%,50%)`,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+            <div style={{ textAlign: 'center', fontSize: 13, color: '#333' }}>{drawingSettings.color}</div>
           </div>
-          <div style={{ marginBottom: 8, position: 'relative', width: hueBarWidth, height: hueBarHeight }}>
-            <canvas
-              ref={hueBarRef}
-              width={hueBarWidth}
-              height={hueBarHeight}
-              style={{ borderRadius: 4, cursor: 'pointer', width: hueBarWidth, height: hueBarHeight, border: '2px solid #eee', display: 'block' }}
-              onPointerDown={e => {
-                handleHuePointer(e);
-                const move = (ev: PointerEvent) => handleHuePointer({ ...e, clientX: ev.clientX } as any);
-                const up = () => {
-                  window.removeEventListener('pointermove', move);
-                  window.removeEventListener('pointerup', up);
-                };
-                window.addEventListener('pointermove', move);
-                window.addEventListener('pointerup', up);
-              }}
-            />
-            {/* Draggable hue handle */}
-            <div
-              style={{
-                position: 'absolute',
-                left: `${(hue / 360) * (hueBarWidth - 1) - 8}px`,
-                top: '-4px',
-                width: 16,
-                height: 24,
-                borderRadius: 8,
-                border: '3px solid #fff',
-                boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
-                background: `hsl(${hue},100%,50%)`,
-                pointerEvents: 'none',
-              }}
-            />
-          </div>
-          <div style={{ textAlign: 'center', fontSize: 13, color: '#333' }}>{drawingSettings.color}</div>
-        </div>
-      )}
+        )}
+      </div>
       <input
         type="range"
         min="1"
@@ -646,7 +647,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       >
         Clear
       </button>
-      {/* Pan/Zoom Buttons */}
       <button
         onClick={() => setPanMode(pm => !pm)}
         style={{
