@@ -177,3 +177,43 @@ The frontend is now capable of managing board access and settings UI flows, fetc
 
 ## Next Steps:
 The immediate next steps for Phase 3 involve adding interactivity to the Container component by implementing drag-and-drop and resizing capabilities, along with the necessary logic to communicate these changes back to the backend via API calls and ensure smooth real-time updates across clients.
+
+
+## Fortifying the Frontend with Tests
+
+Okay, with features flying into the codebase, it was time to slow down and build some scaffolding. You can't build a skyscraper on a foundation of sand, right? So, we rolled up our sleeves and dived head-first into the world of automated testing to make sure our app doesn't crumble under pressure.
+
+#### The Testing Arsenal
+
+We decided to go with a modern, fast, and frankly, pretty slick testing stack:
+
+*   **[Vitest](https://vitest.dev/):** The testing engine. It's built on top of Vite, which already powers our development server, so it's ridiculously fast.
+*   **[React Testing Library](https://testing-library.com/docs/react-testing-library/intro/):** The philosophy. Instead of testing implementation details (like "did this state variable change?"), we test what the user actually sees and interacts with. This makes our tests more resilient to code refactoring.
+*   **`@testing-library/jest-dom`:** A handy extension that adds a bunch of useful matchers for checking on the state of the DOM (e.g., `.toBeInTheDocument()`).
+
+#### The Battle Plan & Execution
+
+We didn't just add tests for one thing; we went on a testing spree across the most critical pages of the application.
+
+1.  **`BoardViewPage.test.tsx`:** This is the heart of our app, so it got top priority. We wrote tests to ensure:
+    *   It shows a "Loading..." state correctly.
+    *   It properly denies access if a user isn't logged in.
+    *   It handles the special "sample board" for demo purposes.
+
+2.  **`DashboardPage.test.tsx`:** The user's home base. We needed to make sure it was solid. Tests now cover:
+    *   The initial loading and error states when fetching boards.
+    *   The "No boards found" message when the user's list is empty.
+    *   The search functionality, ensuring that filtering boards by name works as expected.
+
+3.  **`LoginPage.test.tsx`:** The front door to our app. We locked it down with tests for:
+    *   Successful Google Sign-In, including mocking the backend call and navigation.
+    *   Failed sign-ins, making sure an error message is shown to the user.
+    *   Automatically redirecting users who are already logged in.
+
+#### The Struggle (and Triumph!) with Mocks
+
+It wasn't all smooth sailing. Getting our tests to correctly mock Firebase's authentication flow was... a journey. We wrestled with Vitest's module hoisting and asynchronous `act()` warnings. The `onAuthStateChanged` listener is a powerful tool, but it's tricky to tame in a test environment.
+
+After a few rounds of refactoring, we landed on a stable and reliable mocking strategy that properly simulates the entire authentication lifecycle. It was a tough fight, but the result is a set of tests that we can trust.
+
+With this new testing foundation, we can now build new features with much more confidence, knowing that our automated safety net is there to catch us if we fall.
