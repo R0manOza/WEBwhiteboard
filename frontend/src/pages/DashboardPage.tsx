@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
@@ -11,6 +10,7 @@ interface SimpleBoard {
   name: string;
   description?: string;
   visibility?: string;
+  ownerId: string;
 }
 
 function DashboardPage() {
@@ -29,6 +29,7 @@ function DashboardPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // board id being deleted
+  const [boardFilter, setBoardFilter] = useState<'all' | 'public' | 'private'>('all');
 
   useEffect(() => {
     const fetchBoards = async () => {
@@ -165,64 +166,232 @@ function DashboardPage() {
     }
   };
   const filteredBoards = useMemo(() => {
-  if (!searchTerm.trim()) {
-    return boards; 
-  }
-  const lowercasedSearchTerm = searchTerm.toLowerCase();
-  return boards.filter(board =>
-    (board.name.toLowerCase().includes(lowercasedSearchTerm)) ||
-    (board.description && board.description.toLowerCase().includes(lowercasedSearchTerm))
-    
-  );
-}, [boards, searchTerm]); 
+    let filtered = boards;
+    if (boardFilter === 'public') {
+      filtered = filtered.filter(board => board.visibility === 'public');
+    } else if (boardFilter === 'private') {
+      filtered = filtered.filter(board => board.visibility === 'private');
+    }
+    if (!searchTerm.trim()) {
+      return filtered;
+    }
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    return filtered.filter(board =>
+      (board.name.toLowerCase().includes(lowercasedSearchTerm)) ||
+      (board.description && board.description.toLowerCase().includes(lowercasedSearchTerm))
+    );
+  }, [boards, searchTerm, boardFilter]);
 
   // Render logic based on state
   return (
     <div className="page dashboard-page"> {/* Use existing CSS class */}
-      <h1>Your Boards</h1>
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">Your Boards</h1>
+        <button
+          className="create-board-btn"
+          onClick={() => setShowCreateModal(true)}
+        >
+          <svg className="create-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Create Board
+        </button>
+      </div>
+
+      <div className="search-container">
+        <div className="search-wrapper">
+          <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search boards by name or description..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          {searchTerm && (
+            <button 
+              className="clear-search-btn"
+              onClick={() => setSearchTerm('')}
+              type="button"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Board Filter Buttons */}
+      <div className="board-filter-container">
+        <button
+          className={`board-filter-btn${boardFilter === 'all' ? ' active' : ''}`}
+          onClick={() => setBoardFilter('all')}
+          type="button"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/></svg>
+          All
+        </button>
+        <button
+          className={`board-filter-btn${boardFilter === 'public' ? ' active' : ''}`}
+          onClick={() => setBoardFilter('public')}
+          type="button"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12c0 5.523 4.477 10 10 10s10-4.477 10-10C22 6.477 17.523 2 12 2Zm0 0v20M2 12h20" stroke="currentColor" strokeWidth="2"/></svg>
+          Public
+        </button>
+        <button
+          className={`board-filter-btn${boardFilter === 'private' ? ' active' : ''}`}
+          onClick={() => setBoardFilter('private')}
+          type="button"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="8" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/></svg>
+          Private
+        </button>
+      </div>
 
       <div className="dashboard-actions" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <input
-        type="text"
-        placeholder="Search boards by name or description..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        style={{ padding: '0.5rem', fontSize: '1rem', width: '300px', marginRight: '1rem' }}
-      />
       </div>
-      <button
-        className="create-board-btn"
-        onClick={() => setShowCreateModal(true)}
-        style={{ marginBottom: "1rem" }}
-      >
-        Create Board
-      </button>
 
       {showCreateModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <form onSubmit={handleCreateBoard} style={{ background: '#fff', padding: 24, borderRadius: 8, minWidth: 300 }}>
-            <h2>Create Board</h2>
-            <div>
-              <label>Board Name:</label>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required disabled={createLoading} />
+        <div
+          className="modal-overlay create-modal-overlay"
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowCreateModal(false);
+          }}
+        >
+          <div className="modal-container create-modal">
+            <div className="modal-header">
+              <div className="modal-title-section">
+                <div className="modal-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M16 1V5M8 1V5M3 9H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <h2 className="modal-title">Create New Board</h2>
+              </div>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowCreateModal(false)}
+                type="button"
+                disabled={createLoading}
+                aria-label="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="red" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="16" height="16" fill="red"/>
+                </svg>
+                <span style={{color: '#fff', fontWeight: 'bold', fontSize: '18px', position: 'absolute'}}>X</span>
+              </button>
             </div>
-            <div style={{ marginTop: 10 }}>
-              <label>Description:</label>
-              <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} disabled={createLoading} />
-            </div>
-            <div style={{ marginTop: 10 }}>
-              <label>Visibility:</label>
-              <select value={form.visibility} onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))} disabled={createLoading}>
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-              </select>
-            </div>
-            {createError && <p style={{ color: 'red' }}>{createError}</p>}
-            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-              <button type="submit" disabled={createLoading}>{createLoading ? 'Creating...' : 'Create'}</button>
-              <button type="button" onClick={() => setShowCreateModal(false)} disabled={createLoading}>Cancel</button>
-            </div>
-          </form>
+            
+            <form onSubmit={handleCreateBoard} className="modal-form-content">
+              <div className="form-group">
+                <label className="form-label">
+                  <svg className="label-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Board Name
+                </label>
+                <input 
+                  type="text" 
+                  className="form-input"
+                  value={form.name} 
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
+                  required 
+                  disabled={createLoading}
+                  placeholder="Enter board name..."
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">
+                  <svg className="label-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M10 9H9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Description
+                </label>
+                <textarea 
+                  className="form-textarea"
+                  value={form.description} 
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
+                  disabled={createLoading}
+                  placeholder="Describe your board (optional)..."
+                  rows={3}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">
+                  <svg className="label-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Visibility
+                </label>
+                <select 
+                  className="form-select"
+                  value={form.visibility} 
+                  onChange={e => setForm(f => ({ ...f, visibility: e.target.value }))} 
+                  disabled={createLoading}
+                >
+                  <option value="public">🌍 Public - Anyone can view</option>
+                  <option value="private">🔒 Private - Only you and invited members</option>
+                </select>
+              </div>
+              
+              {createError && (
+                <div className="error-message">
+                  <svg className="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M15 9L9 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {createError}
+                </div>
+              )}
+              
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setShowCreateModal(false)} 
+                  disabled={createLoading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={createLoading}
+                >
+                  {createLoading ? (
+                    <>
+                      <svg className="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Create Board
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       {editBoard && (
@@ -280,6 +449,7 @@ function DashboardPage() {
               </div>
               <div className="board-card-body">
                 <div className="board-description">{board.description}</div>
+                <div className="board-owner"><b>Owner:</b> {board.ownerId || 'Unknown'}</div>
                 <div className="board-visibility">Visibility: {board.visibility}</div>
               </div>
               <button className="open-btn" onClick={() => navigate(`/board/${board.id}`)}>Open Board</button>
