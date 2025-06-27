@@ -53,6 +53,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   // Add pan mode toggle for button
   const [panMode, setPanMode] = useState(false);
 
+  // Add eraser mode toggle for button
+  const [isEraserMode, setIsEraserMode] = useState(false);
+
   // Pan mode effect (button toggles spacePressedRef)
   useEffect(() => {
     spacePressedRef.current = panMode;
@@ -117,7 +120,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     console.log('DrawingCanvas: Drawing stroke with', stroke.points.length, 'points, color:', stroke.color, 'brushSize:', stroke.brushSize);
     
     ctx.save();
-    ctx.strokeStyle = stroke.color;
+    if (stroke.color === 'ERASER') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+    }
     ctx.lineWidth = stroke.brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -150,15 +159,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       boardId,
       userId: user.uid,
       points: [{ x: world.x, y: world.y, timestamp: Date.now() }],
-      color: drawingSettings.color,
+      color: isEraserMode ? 'ERASER' : drawingSettings.color,
       brushSize: drawingSettings.brushSize,
       opacity: drawingSettings.opacity,
       createdAt: Date.now()
     };
     setDrawingState(prev => ({ ...prev, isDrawing: true, currentStroke: newStroke }));
     socket?.emit('drawingStatus', { boardId, isDrawing: true });
-    socket?.emit('strokeStart', { boardId, strokeId: newStroke.id, color: drawingSettings.color, brushSize: drawingSettings.brushSize, opacity: drawingSettings.opacity });
-  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket, screenToWorld]);
+    socket?.emit('strokeStart', { boardId, strokeId: newStroke.id, color: newStroke.color, brushSize: newStroke.brushSize, opacity: newStroke.opacity });
+  }, [user, isConnected, getCanvasContext, boardId, drawingSettings, socket, screenToWorld, isEraserMode]);
 
   // Handle mouse move - continue drawing
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -357,7 +366,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         type="color"
         value={drawingSettings.color}
         onChange={(e) => setDrawingSettings(prev => ({ ...prev, color: e.target.value }))}
-        style={{ width: '30px', height: '30px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        style={{ width: '30px', height: '30px', border: 'none', borderRadius: '4px', cursor: isEraserMode ? 'not-allowed' : 'pointer', opacity: isEraserMode ? 0.5 : 1 }}
+        disabled={isEraserMode}
       />
       <input
         type="range"
@@ -370,6 +380,22 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       <span style={{ fontSize: '12px', color: '#666' }}>
         {drawingSettings.brushSize}px
       </span>
+      <button
+        onClick={() => setIsEraserMode(em => !em)}
+        style={{
+          padding: '4px 8px',
+          backgroundColor: isEraserMode ? '#2563eb' : '#e5e7eb',
+          color: isEraserMode ? 'white' : '#222',
+          border: 'none',
+          borderRadius: '4px',
+          fontSize: '14px',
+          cursor: 'pointer',
+          fontWeight: 600
+        }}
+        title={isEraserMode ? 'Switch to Pen' : 'Switch to Eraser'}
+      >
+        <span role="img" aria-label="eraser">🧽</span> {isEraserMode ? 'Eraser (On)' : 'Eraser'}
+      </button>
       <button
         onClick={handleUndo}
         style={{
