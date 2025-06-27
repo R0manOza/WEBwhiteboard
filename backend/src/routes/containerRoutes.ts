@@ -2,6 +2,7 @@ import express, { Router, Response } from 'express';
 import admin from '../config/firebaseAdmin';
 import { verifyTokenMiddleware, AuthenticatedRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid'; 
+import itemRoutes from './itemRoutes';
 const firestore = admin.firestore();
 const router: Router = express.Router({ mergeParams: true });
 interface Position {
@@ -285,5 +286,5 @@ router.delete('/:containerId', verifyTokenMiddleware, async (req: AuthenticatedR
         res.status(500).json({ error: 'Failed to delete container', details: error.message });
     }
 });
-
+router.use('/:containerId/items', itemRoutes);
 export default router; 
