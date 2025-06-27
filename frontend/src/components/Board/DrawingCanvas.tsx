@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../contexts/AuthContext';
 import type { DrawingStroke, DrawingPoint } from '../../../../shared/types';
@@ -15,6 +15,35 @@ interface DrawingState {
   currentStroke: DrawingStroke | null;
   strokes: DrawingStroke[];
   otherUserStrokes: { [userId: string]: DrawingStroke[] };
+}
+
+// Utility functions for color conversion
+function hsvToRgb(h: number, s: number, v: number) {
+  let f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+  return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
+}
+function rgbToHex(r: number, g: number, b: number) {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function hexToRgb(hex: string) {
+  let m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0,0,0];
+}
+function rgbToHsv(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  let max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, v = max;
+  let d = max - min;
+  s = max === 0 ? 0 : d / max;
+  if (max !== min) {
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return [h, s, v];
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ 
@@ -339,6 +368,91 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     setViewport(v => ({ ...v, scale: newScale, offsetX: newOffsetX, offsetY: newOffsetY }));
   };
 
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const colorButtonRef = useRef<HTMLDivElement>(null);
+
+  // HSV state for color picker
+  const [hue, setHue] = useState(0); // 0-360
+  const [sat, setSat] = useState(1); // 0-1
+  const [val, setVal] = useState(1); // 0-1
+
+  // Sync HSV with current color when opening
+  useEffect(() => {
+    if (colorPickerOpen) {
+      const [r, g, b] = hexToRgb(drawingSettings.color);
+      const [h, s, v] = rgbToHsv(r, g, b);
+      setHue(h);
+      setSat(s);
+      setVal(v);
+    }
+  }, [colorPickerOpen]);
+
+  const spectrumSize = 180;
+  const hueBarWidth = 180;
+  const hueBarHeight = 16;
+
+  // Draw spectrum (sat/val) box
+  const spectrumRef = useRef<HTMLCanvasElement>(null);
+  function drawSpectrum(hue: number) {
+    if (!spectrumRef.current) return;
+    const ctx = spectrumRef.current.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, spectrumSize, spectrumSize);
+    for (let y = 0; y < spectrumSize; y++) {
+      for (let x = 0; x < spectrumSize; x++) {
+        const s = x / (spectrumSize - 1);
+        const v = 1 - y / (spectrumSize - 1);
+        const [r, g, b] = hsvToRgb(hue, s, v);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+
+  useLayoutEffect(() => {
+    drawSpectrum(hue);
+  }, [hue, colorPickerOpen, spectrumSize, sat, val]);
+
+  // Draw hue bar
+  const hueBarRef = useRef<HTMLCanvasElement>(null);
+  useLayoutEffect(() => {
+    if (!hueBarRef.current) return;
+    const ctx = hueBarRef.current.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, hueBarWidth, hueBarHeight);
+    for (let x = 0; x < hueBarWidth; x++) {
+      const h = (x / (hueBarWidth - 1)) * 360;
+      const [r, g, b] = hsvToRgb(h, 1, 1);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x, 0, 1, hueBarHeight);
+    }
+  }, [colorPickerOpen, hueBarWidth, hueBarHeight, hue, sat, val]);
+
+  // Handle spectrum drag
+  const handleSpectrumPointer = (e: React.PointerEvent<HTMLCanvasElement> | PointerEvent) => {
+    const rect = spectrumRef.current!.getBoundingClientRect();
+    let x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    let y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    const s = Math.max(0, Math.min(1, x / (rect.width - 1)));
+    const v = Math.max(0, Math.min(1, 1 - y / (rect.height - 1)));
+    setSat(s);
+    setVal(v);
+    setDrawingSettings(prev => {
+      const [r, g, b] = hsvToRgb(hue, s, v);
+      return { ...prev, color: rgbToHex(r, g, b) };
+    });
+    drawSpectrum(hue); // Always redraw after pointer interaction
+  };
+  // Handle hue drag
+  const handleHuePointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = hueBarRef.current!.getBoundingClientRect();
+    let x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const h = (x / (rect.width - 1)) * 360;
+    setHue(h);
+    const [r, g, b] = hsvToRgb(h, sat, val);
+    setDrawingSettings(prev => ({ ...prev, color: rgbToHex(r, g, b) }));
+  };
+
   const DrawingTools = () => (
     <div style={{
       position: 'absolute',
@@ -353,13 +467,119 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       alignItems: 'center',
       zIndex: 1000
     }}>
-      <input
-        type="color"
-        value={drawingSettings.color}
-        onChange={(e) => setDrawingSettings(prev => ({ ...prev, color: e.target.value }))}
-        style={{ width: '30px', height: '30px', border: 'none', borderRadius: '4px', cursor: isEraserMode ? 'not-allowed' : 'pointer', opacity: isEraserMode ? 0.5 : 1 }}
-        disabled={isEraserMode}
+      <div
+        ref={colorButtonRef}
+        className="color-box"
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 6,
+          background: drawingSettings.color,
+          border: '2px solid #e5e7eb',
+          marginRight: 8,
+          cursor: 'pointer',
+          boxShadow: colorPickerOpen ? '0 0 0 2px #2563eb' : undefined,
+          position: 'relative',
+          display: 'inline-block',
+        }}
+        onClick={() => setColorPickerOpen((v) => !v)}
+        title="Choose color"
       />
+      {colorPickerOpen && !isEraserMode && (
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 2000,
+            top: 46,
+            left: 0,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            background: 'white',
+            borderRadius: 8,
+            padding: 12,
+            minWidth: 200
+          }}
+          tabIndex={-1}
+        >
+          {/* Color preview swatch */}
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            background: drawingSettings.color,
+            border: '2px solid #2563eb',
+            margin: '0 auto 12px auto',
+            boxShadow: '0 2px 8px #0002'
+          }} />
+          <div style={{ marginBottom: 12, position: 'relative', width: spectrumSize, height: spectrumSize }}>
+            {/* Canvas first, then handle */}
+            <canvas
+              ref={spectrumRef}
+              width={spectrumSize}
+              height={spectrumSize}
+              style={{ borderRadius: 8, cursor: 'crosshair', width: spectrumSize, height: spectrumSize, display: 'block', border: '2px solid #eee' }}
+              onPointerDown={e => {
+                handleSpectrumPointer(e);
+                const move = (ev: PointerEvent) => handleSpectrumPointer({ ...e, clientX: ev.clientX, clientY: ev.clientY } as any);
+                const up = () => {
+                  window.removeEventListener('pointermove', move);
+                  window.removeEventListener('pointerup', up);
+                };
+                window.addEventListener('pointermove', move);
+                window.addEventListener('pointerup', up);
+              }}
+            />
+            {/* Draggable circle */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${sat * (spectrumSize - 1) - 10}px`,
+                top: `${(1 - val) * (spectrumSize - 1) - 10}px`,
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                border: '3px solid #fff',
+                boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
+                background: drawingSettings.color,
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 8, position: 'relative', width: hueBarWidth, height: hueBarHeight }}>
+            <canvas
+              ref={hueBarRef}
+              width={hueBarWidth}
+              height={hueBarHeight}
+              style={{ borderRadius: 4, cursor: 'pointer', width: hueBarWidth, height: hueBarHeight, border: '2px solid #eee', display: 'block' }}
+              onPointerDown={e => {
+                handleHuePointer(e);
+                const move = (ev: PointerEvent) => handleHuePointer({ ...e, clientX: ev.clientX } as any);
+                const up = () => {
+                  window.removeEventListener('pointermove', move);
+                  window.removeEventListener('pointerup', up);
+                };
+                window.addEventListener('pointermove', move);
+                window.addEventListener('pointerup', up);
+              }}
+            />
+            {/* Draggable hue handle */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${(hue / 360) * (hueBarWidth - 1) - 8}px`,
+                top: '-4px',
+                width: 16,
+                height: 24,
+                borderRadius: 8,
+                border: '3px solid #fff',
+                boxShadow: '0 0 0 2px #2563eb, 0 2px 8px #0003',
+                background: `hsl(${hue},100%,50%)`,
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#333' }}>{drawingSettings.color}</div>
+        </div>
+      )}
       <input
         type="range"
         min="1"
