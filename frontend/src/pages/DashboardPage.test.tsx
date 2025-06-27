@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -20,7 +21,11 @@ vi.mock('react-router-dom', () => {
 });
 
 describe('DashboardPage', () => {
-  const mockUser = { uid: 'user1', getIdToken: vi.fn().mockResolvedValue('mock-token') };
+  const mockUser = { 
+    uid: 'user1', 
+    displayName: 'Current User',
+    getIdToken: vi.fn().mockResolvedValue('mock-token') 
+  };
   let fetchMock: any;
 
   beforeEach(() => {
@@ -55,8 +60,8 @@ describe('DashboardPage', () => {
 
   it('shows boards and filters by search', async () => {
     const boards = [
-      { id: '1', name: 'Alpha', description: 'First', visibility: 'public' },
-      { id: '2', name: 'Beta', description: 'Second', visibility: 'private' },
+      { id: '1', name: 'Alpha', description: 'First', visibility: 'public', ownerId: 'owner1' },
+      { id: '2', name: 'Beta', description: 'Second', visibility: 'private', ownerId: 'owner2' },
     ];
     fetchMock.mockResolvedValue({ ok: true, json: async () => boards });
     render(<DashboardPage />);
@@ -72,5 +77,56 @@ describe('DashboardPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/search boards/i), { target: { value: '' } });
     expect(screen.getByText('Alpha')).toBeInTheDocument();
     expect(screen.getByText('Beta')).toBeInTheDocument();
+  });
+
+  it('displays owner names instead of IDs', async () => {
+    const boards = [
+      { id: '1', name: 'Alpha', description: 'First', visibility: 'public', ownerId: 'owner1' },
+      { id: '2', name: 'Beta', description: 'Second', visibility: 'private', ownerId: 'user1' }, // Current user
+    ];
+    
+    // Mock the boards fetch
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => boards })
+      // Mock the userInfo fetch for owner1
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ displayName: 'John Doe' }) })
+      // Mock the userInfo fetch for user1 (current user)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ displayName: 'Current User' }) });
+    
+    render(<DashboardPage />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Alpha')).toBeInTheDocument();
+      expect(screen.getByText('Beta')).toBeInTheDocument();
+    });
+    
+    // Check that owner names are displayed
+    await waitFor(() => {
+      expect(screen.getByText(/Owner: John Doe/)).toBeInTheDocument();
+      expect(screen.getByText(/Owner: Me/)).toBeInTheDocument(); // Current user should show as "Me"
+    });
+  });
+
+  it('shows "Unknown" for owners that cannot be fetched', async () => {
+    const boards = [
+      { id: '1', name: 'Alpha', description: 'First', visibility: 'public', ownerId: 'unknown-owner' },
+    ];
+    
+    // Mock the boards fetch
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => boards })
+      // Mock the userInfo fetch to fail
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'User not found' }) });
+    
+    render(<DashboardPage />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Alpha')).toBeInTheDocument();
+    });
+    
+    // Check that "Unknown" is displayed for failed owner fetch
+    await waitFor(() => {
+      expect(screen.getByText(/Owner: Unknown/)).toBeInTheDocument();
+    });
   });
 }); 
