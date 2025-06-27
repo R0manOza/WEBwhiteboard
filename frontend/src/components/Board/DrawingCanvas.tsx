@@ -84,6 +84,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   // Add pan mode toggle for button
   const [panMode, setPanMode] = useState(false);
 
+  // Add eraser mode toggle for button
+  const [isEraserMode, setIsEraserMode] = useState(false);
+
   // Pan mode effect (button toggles spacePressedRef)
   useEffect(() => {
     spacePressedRef.current = panMode;
@@ -483,8 +486,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           display: 'inline-block',
         }}
         onClick={() => setColorPickerOpen((v) => !v)}
-        title="Choose color"
-      />
+        title="Choose color">
       {colorPickerOpen && !isEraserMode && (
         <div
           style={{

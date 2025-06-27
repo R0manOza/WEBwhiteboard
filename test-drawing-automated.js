@@ -1,6 +1,3 @@
-// Automated Real-Time Drawing Tests
-// Run this in browser console or as a Node.js script
-
 const { io } = require("socket.io-client");
 
 class DrawingTestSuite {

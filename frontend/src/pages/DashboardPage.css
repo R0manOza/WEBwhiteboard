@@ -5,17 +5,184 @@
   padding: 2rem 1rem; /* Added padding */
 }
 
-/* Refined Create Board Button */
-button.create-board-btn { /* Use the base button style, override specific properties */
-  background: #4f8cff; /* Lighter blue for primary action */
-  border-color: #4f8cff;
-  /* Other styles from base button in App.css */
-}
-button.create-board-btn:hover:not(:disabled) {
-  background: #2563eb; /* Darker blue on hover */
-  border-color: #2563eb;
+/* Beautiful Dashboard Header */
+.dashboard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2rem;
+  gap: 1.5rem;
 }
 
+.dashboard-title {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #4f8cff 0%, #2563eb 50%, #1d4ed8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: -2px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(79, 140, 255, 0.1);
+  position: relative;
+}
+
+.dashboard-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #4f8cff, #2563eb);
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(79, 140, 255, 0.3);
+}
+
+/* Enhanced Create Board Button */
+.create-board-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4f8cff 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.create-board-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.create-board-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 140, 255, 0.4);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.create-board-btn:hover::before {
+  left: 100%;
+}
+
+.create-board-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.3);
+}
+
+.create-board-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.create-icon {
+  transition: transform 0.2s ease;
+}
+
+.create-board-btn:hover .create-icon {
+  transform: rotate(90deg);
+}
+
+/* Beautiful Search Bar Styling */
+.search-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0 1.5rem 0;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  color: #9ca3af;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  font-size: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #374151;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4f8cff;
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.1);
+  background: #ffffff;
+}
+
+.search-wrapper:focus-within .search-icon {
+  color: #4f8cff;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.clear-search-btn:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.clear-search-btn:active {
+  transform: scale(0.95);
+}
+
+/* Dashboard Actions */
+.dashboard-actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
 
 .board-list-cards {
   display: flex;
@@ -118,6 +285,13 @@ button.create-board-btn:hover:not(:disabled) {
   font-size: 0.9rem; /* Slightly smaller */
 }
 
+.board-owner {
+  color: #2563eb;
+  font-size: 0.97rem;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
 /* Modal overlay */
 /* Use consistent modal styles */
 .modal-overlay {
@@ -130,76 +304,362 @@ button.create-board-btn:hover:not(:disabled) {
   z-index: 1000;
   padding: 1rem; /* Add padding for small screens */
 }
-.modal-form {
+
+/* Enhanced Create Modal Styling */
+.create-modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+.create-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+  border: 1px solid rgba(79, 140, 255, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0 24px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+  gap: 12px;
+}
+
+.modal-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.modal-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #4f8cff 0%, #2563eb 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(79, 140, 255, 0.3);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #2563eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+  flex-shrink: 0;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
+}
+
+.modal-close-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  stroke: #fff;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.10));
+  transition: stroke 0.2s, color 0.2s;
+}
+
+.modal-close-btn:hover,
+.modal-close-btn:focus {
+  background: #1d4ed8;
+}
+
+.modal-close-btn:hover svg,
+.modal-close-btn:focus svg {
+  stroke: #fff;
+  color: #fff;
+  filter: drop-shadow(0 2px 4px rgba(37,99,235,0.18));
+}
+
+.modal-close-btn:active svg {
+  stroke: #2563eb;
+  color: #2563eb;
+}
+
+.modal-form-content {
+  padding: 0 24px 24px 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.label-icon {
+  color: #6b7280;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: #ffffff;
+  color: #374151;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #4f8cff;
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.1);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.form-select {
+  cursor: pointer;
+  /* background-image: none; */
   background: #fff;
-  padding: 1.5rem; /* Adjusted padding */
-  border-radius: 8px; /* Consistent radius */
-  min-width: 320px;
-  max-width: 400px; /* Cap width */
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15); /* More prominent shadow */
-  width: 100%; /* Ensure it respects max-width */
-  box-sizing: border-box; /* Include padding */
-}
-.modal-form h2 {
-    margin-top: 0;
-    margin-bottom: 1.5rem; /* Space below title */
-    font-size: 1.5rem;
-    color: #1f2937;
+  padding-right: 16px;
 }
 
-/* Form group styles within modal */
-.modal-form div { /* Target direct children divs for form groups */
-    margin-bottom: 1rem;
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
 }
 
-.modal-form label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #374151;
-    font-size: 0.95rem;
+.error-icon {
+  flex-shrink: 0;
 }
 
-.modal-form input[type="text"],
-.modal-form select {
-    width: 100%;
-    padding: 0.6rem 0.8rem; /* Adjusted padding */
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.modal-form input[type="text"]:focus,
-.modal-form select:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); /* Softer focus ring */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
 }
 
-.modal-form .form-actions { /* Style for button container */
-    display: flex;
-    gap: 0.75rem; /* Adjusted gap */
-    margin-top: 1.5rem; /* Space above buttons */
-    justify-content: flex-end; /* Align buttons to the right */
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 120px;
+  justify-content: center;
 }
 
-.modal-form button[type="submit"] { /* Primary button */
-   /* Inherits base button style */
-}
-.modal-form button[type="button"] { /* Cancel button */
-   /* Inherits base button style */
-   background-color: #fff; /* White background */
-   color: #323130; /* Dark text */
-   border-color: #d1d5db; /* Light border */
-}
-.modal-form button[type="button"]:hover:not(:disabled) {
-   background-color: #f3f2f1; /* Light grey hover */
-   border-color: #c8c6c4; /* Slightly darker border */
+.btn-primary {
+  background: linear-gradient(135deg, #4f8cff 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(79, 140, 255, 0.3);
 }
 
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 140, 255, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Board Filter Buttons */
+.board-filter-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.board-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f4f6;
+  color: #2563eb;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.06);
+  outline: none;
+  position: relative;
+}
+
+.board-filter-btn svg {
+  color: #4f8cff;
+  transition: color 0.18s;
+}
+
+.board-filter-btn.active,
+.board-filter-btn:focus {
+  background: linear-gradient(135deg, #4f8cff 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(79,140,255,0.13);
+}
+
+.board-filter-btn.active svg,
+.board-filter-btn:focus svg {
+  color: #fff;
+}
+
+.board-filter-btn:hover:not(.active):not(:disabled) {
+  background: #e0e7ff;
+  color: #2563eb;
+}
 
 @media (max-width: 600px) {
+  .dashboard-header {
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+  
+  .dashboard-title {
+    font-size: 2.2rem;
+    letter-spacing: -1px;
+  }
+  
+  .dashboard-title::after {
+    width: 50px;
+    height: 3px;
+    bottom: -6px;
+  }
+  
+  .create-board-btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 14px;
+  }
+  
+  .search-container {
+    margin: 1.5rem 0 1rem 0;
+  }
+  
+  .search-wrapper {
+    max-width: 100%;
+  }
+  
+  .search-input {
+    padding: 12px 16px 12px 44px;
+    font-size: 0.95rem;
+  }
+  
+  .search-icon {
+    left: 14px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  .clear-search-btn {
+    right: 10px;
+  }
+  
   .board-list-cards {
     flex-direction: column;
     gap: 1rem;
@@ -222,4 +682,64 @@ button.create-board-btn:hover:not(:disabled) {
    .modal-form .form-actions button {
         width: 100%; /* Full width buttons */
    }
+  
+  /* Modal responsive design */
+  .create-modal {
+    margin: 1rem;
+    border-radius: 16px;
+    max-height: calc(100vh - 2rem);
+  }
+  
+  .modal-header {
+    padding: 16px 12px 0 12px;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  
+  .modal-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  
+  .modal-title {
+    font-size: 1.3rem;
+  }
+  
+  .modal-form-content {
+    padding: 0 20px 20px 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-input,
+  .form-textarea,
+  .form-select {
+    padding: 10px 14px;
+    font-size: 0.95rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    padding: 14px 20px;
+  }
+  
+  .board-filter-container {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .board-filter-btn {
+    font-size: 0.97rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    min-width: 0;
+  }
 }
