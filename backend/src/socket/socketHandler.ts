@@ -11,6 +11,9 @@ export function initializeSocket(io: Server) {
   // Function to get active connections count (for API routes)
   const getActiveConnections = () => activeConnections;
 
+  // Track all online user UIDs globally
+  const onlineUserUids = new Set<string>();
+
   // Authenticate socket connections using Firebase ID token
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -260,6 +263,14 @@ export function initializeSocket(io: Server) {
       });
     });
 
+    // Listen for getOnlineFriends event
+    socket.on('getOnlineFriends', (data: { friendUids: string[] }) => {
+      if (!data || !Array.isArray(data.friendUids)) return;
+      // Find which friend UIDs are online
+      const online = data.friendUids.filter(uid => onlineUserUids.has(uid));
+      socket.emit('onlineFriends', { online });
+    });
+
     // Add more event handlers as needed
 
     // Handle disconnect
@@ -278,7 +289,10 @@ export function initializeSocket(io: Server) {
       // Decrement active connections counter
       activeConnections = Math.max(0, activeConnections - 1);
       console.log(`User disconnected: ${user.uid}. Active connections: ${activeConnections}`);
+      onlineUserUids.delete(user.uid);
     });
+
+    onlineUserUids.add(user.uid);
   });
 
   // Return the getter function for API routes

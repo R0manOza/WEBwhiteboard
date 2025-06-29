@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './DashboardPage.css'; // Add this for custom styles
@@ -51,6 +51,12 @@ function DashboardPage() {
   const [addFriendLoading, setAddFriendLoading] = useState(false);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const { socket } = useSocket(user?.uid || 'dashboard');
+  const [userSearchResults, setUserSearchResults] = useState<FriendUser[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [sentRequests, setSentRequests] = useState<string[]>([]);
 
   const fetchOwnerNames = useCallback(async (boardsData: SimpleBoard[], token: string) => {
     console.log('🔍 fetchOwnerNames called with boards:', boardsData);
@@ -274,6 +280,14 @@ function DashboardPage() {
       ]);
       if (friendsRes.ok) setFriends(await friendsRes.json());
       if (requestsRes.ok) setFriendRequests(await requestsRes.json());
+      // Fetch sentRequests from user info
+      const userInfoRes = await fetch(`/api/auth/userInfo?uid=${user.uid}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (userInfoRes.ok) {
+        const userInfo = await userInfoRes.json();
+        setSentRequests(userInfo.sentRequests || []);
+      } else {
+        setSentRequests([]);
+      }
     } catch (err) {
       // ignore
     }
@@ -302,6 +316,49 @@ function DashboardPage() {
     };
   }, [socket, fetchFriendsAndRequests]);
 
+  // Autocomplete: search users as you type
+  useEffect(() => {
+    if (!addFriendUsername.trim()) {
+      setUserSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+    setSearchLoading(true);
+    setSearchError(null);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        if (!user) return;
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/auth/users/search?query=${encodeURIComponent(addFriendUsername.trim())}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to search users');
+        const data = await res.json();
+        setUserSearchResults(data);
+      } catch (err: any) {
+        setSearchError('Failed to search users');
+        setUserSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300); // debounce
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, [addFriendUsername, user]);
+
+  // Debug logs for friends and search
+  useEffect(() => {
+    if (inputFocused && userSearchResults.length > 0) {
+      console.log('My UID:', user?.uid);
+      console.log('Friends:', friends.map(f => f.uid));
+      userSearchResults.forEach(u => {
+        console.log('Search user:', u.uid, u.displayName);
+      });
+    }
+  }, [inputFocused, userSearchResults, user, friends]);
+
   // Add friend handler
   const handleAddFriend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,11 +367,14 @@ function DashboardPage() {
     setAddFriendLoading(true);
     try {
       if (!addFriendUsername.trim()) throw new Error('Enter a username');
+      // Try to find the user in the search results for a more robust match
+      const selectedUser = userSearchResults.find(u => u.displayName.toLowerCase() === addFriendUsername.trim().toLowerCase());
+      const usernameToSend = selectedUser ? selectedUser.displayName : addFriendUsername.trim();
       const token = await user.getIdToken();
       const res = await fetch('/api/friends/request', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: addFriendUsername.trim() })
+        body: JSON.stringify({ username: usernameToSend })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send request');
@@ -624,56 +684,6 @@ function DashboardPage() {
       )}
       </>
       )}
-
-      {/* Friends Section */}
-      <div className="friends-section" style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Friends</h2>
-        <form onSubmit={handleAddFriend} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input
-            type="text"
-            placeholder="Add friend by username..."
-            value={addFriendUsername}
-            onChange={e => setAddFriendUsername(e.target.value)}
-            disabled={addFriendLoading}
-            style={{ padding: 8, borderRadius: 8, border: '1px solid #ccc', flex: 1 }}
-          />
-          <button type="submit" className="btn-primary" disabled={addFriendLoading} style={{ minWidth: 120 }}>
-            {addFriendLoading ? 'Sending...' : 'Add Friend'}
-          </button>
-        </form>
-        {addFriendError && <div className="error-message">{addFriendError}</div>}
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: 4 }}>Your Friends</h3>
-            {friends.length === 0 ? <div>No friends yet.</div> : (
-              <ul style={{ paddingLeft: 0, listStyle: 'none' }}>
-                {friends.map(f => (
-                  <li key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    {f.photoURL && <img src={f.photoURL} alt={f.displayName} style={{ width: 28, height: 28, borderRadius: '50%' }} />}
-                    <span>{f.displayName}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: 4 }}>Pending Requests</h3>
-            {friendRequests.length === 0 ? <div>No requests.</div> : (
-              <ul style={{ paddingLeft: 0, listStyle: 'none' }}>
-                {friendRequests.map(r => (
-                  <li key={r.uid} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    {r.photoURL && <img src={r.photoURL} alt={r.displayName} style={{ width: 28, height: 28, borderRadius: '50%' }} />}
-                    <span>{r.displayName}</span>
-                    <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '0.95rem' }} disabled={requestsLoading} onClick={() => handleAcceptFriend(r.uid)}>
-                      Accept
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
