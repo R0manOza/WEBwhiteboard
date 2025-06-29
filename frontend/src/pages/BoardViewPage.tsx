@@ -744,6 +744,7 @@ function BoardViewPage() {
               <Container
                 key={container.id}
                 container={container}
+                boardId={boardId || ""}
                 onPositionChange={handleContainerPositionChange}
                 onSizeChange={handleContainerSizeChange}
                 onDelete={handleContainerDelete}

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import type { NoteItem, LinkItem } from '../../../../shared/types';
+import itemService from '../../services/itemService';
 
 interface CreateItemFormProps {
+  boardId: string;
   containerId: string;
   containerPurpose: 'notes' | 'links';
   onCreateSuccess?: (item: NoteItem | LinkItem) => void;
@@ -11,6 +13,7 @@ interface CreateItemFormProps {
 }
 
 const CreateItemForm: React.FC<CreateItemFormProps> = ({
+  boardId,
   containerId,
   containerPurpose,
   onCreateSuccess,
@@ -24,6 +27,8 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#fef3c7');
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Color options for notes
   const colorOptions = [
@@ -67,10 +72,10 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (loading) return;
+    if (isSubmitting) return;
 
     // Validate required fields
     if (!title.trim()) {
@@ -88,53 +93,45 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
       return;
     }
 
-    // Create item object
-    const baseItem = {
-      id: Math.random().toString(36).substr(2, 9), // Temporary ID
-      containerId,
-      title: title.trim(),
-      createdBy: 'current-user', // This should come from auth context
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-    let newItem: NoteItem | LinkItem;
+    try {
+      let newItem: NoteItem | LinkItem;
 
-    if (containerPurpose === 'notes') {
-      newItem = {
-        ...baseItem,
-        content: content.trim(),
-        color,
-      } as NoteItem;
-    } else {
-      // For links, add protocol if missing
-      let urlToSave = url.trim();
-      if (!urlToSave.startsWith('http://') && !urlToSave.startsWith('https://')) {
-        urlToSave = 'https://' + urlToSave;
+      if (containerPurpose === 'notes') {
+        newItem = await itemService.createNote(boardId, containerId, title.trim(), content.trim(), color);
+      } else {
+        // For links, add protocol if missing
+        let urlToSave = url.trim();
+        if (!urlToSave.startsWith('http://') && !urlToSave.startsWith('https://')) {
+          urlToSave = 'https://' + urlToSave;
+        }
+        
+        newItem = await itemService.createLink(boardId, containerId, title.trim(), urlToSave, description.trim());
       }
-      
-      newItem = {
-        ...baseItem,
-        url: urlToSave,
-        description: description.trim(),
-      } as LinkItem;
+
+      // Call success callback
+      onCreateSuccess?.(newItem);
+
+      // Reset form
+      setTitle('');
+      setContent('');
+      setUrl('');
+      setDescription('');
+      setColor('#fef3c7');
+      setUrlError(null);
+    } catch (error) {
+      console.error('[CreateItemForm] Error creating item:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to create item');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Call success callback
-    onCreateSuccess?.(newItem);
-
-    // Reset form
-    setTitle('');
-    setContent('');
-    setUrl('');
-    setDescription('');
-    setColor('#fef3c7');
-    setUrlError(null);
   };
 
   // Handle cancel
   const handleCancel = () => {
-    if (loading) return;
+    if (isSubmitting) return;
     onCancel?.();
   };
 
@@ -155,7 +152,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={`Enter ${containerPurpose === 'notes' ? 'note' : 'link'} title...`}
-            disabled={loading}
+            disabled={isSubmitting}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -180,7 +177,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
               placeholder="https://example.com"
-              disabled={loading}
+              disabled={isSubmitting}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -210,7 +207,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Write your note content here..."
-              disabled={loading}
+              disabled={isSubmitting}
               style={{
                 width: '100%',
                 minHeight: '80px',
@@ -237,7 +234,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add a description (optional)..."
-              disabled={loading}
+              disabled={isSubmitting}
               style={{
                 width: '100%',
                 minHeight: '60px',
@@ -266,7 +263,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
                   key={colorOption.value}
                   type="button"
                   onClick={() => setColor(colorOption.value)}
-                  disabled={loading}
+                  disabled={isSubmitting}
                   style={{
                     width: '32px',
                     height: '32px',
@@ -284,7 +281,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
         )}
 
         {/* Error message */}
-        {error && (
+        {(error || submitError) && (
           <div style={{ 
             marginBottom: '12px', 
             padding: '8px 12px', 
@@ -294,7 +291,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
             fontSize: '13px',
             color: '#dc2626'
           }}>
-            {error}
+            {submitError || error}
           </div>
         )}
 
@@ -303,7 +300,7 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
           <button
             type="button"
             onClick={handleCancel}
-            disabled={loading}
+            disabled={isSubmitting}
             style={{
               padding: '8px 16px',
               border: '1px solid #d1d5db',
@@ -311,27 +308,27 @@ const CreateItemForm: React.FC<CreateItemFormProps> = ({
               backgroundColor: 'white',
               color: '#374151',
               fontSize: '14px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={loading || (containerPurpose === 'links' && (!!urlError || !url.trim()))}
+            disabled={isSubmitting || (containerPurpose === 'links' && (!!urlError || !url.trim()))}
             style={{
               padding: '8px 16px',
               border: 'none',
               borderRadius: '6px',
-              backgroundColor: loading ? '#9ca3af' : '#2563eb',
+              backgroundColor: isSubmitting ? '#9ca3af' : '#2563eb',
               color: 'white',
               fontSize: '14px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
           >
-            {loading ? 'Creating...' : `Create ${containerPurpose === 'notes' ? 'Note' : 'Link'}`}
+            {isSubmitting ? 'Creating...' : `Create ${containerPurpose === 'notes' ? 'Note' : 'Link'}`}
           </button>
         </div>
       </form>

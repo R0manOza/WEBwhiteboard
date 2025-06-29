@@ -4,9 +4,12 @@ import ContainerDrawing from './ContainerDrawing';
 import NoteItem from '../Items/NoteItem';
 import LinkItem from '../Items/LinkItem';
 import CreateItemForm from '../Items/CreateItemForm';
+import { useSocket } from '../../hooks/useSocket';
+import itemService from '../../services/itemService';
 
 interface ContainerProps {
   container: ContainerType;
+  boardId: string;
   onPositionChange?: (containerId: string, newPosition: { x: number; y: number }) => void;
   onSizeChange?: (containerId: string, newSize: { width: number; height: number }) => void;
   onDelete?: (containerId: string) => void;
@@ -17,6 +20,7 @@ interface ContainerProps {
 
 const Container: React.FC<ContainerProps> = ({ 
   container, 
+  boardId, 
   onPositionChange, 
   onSizeChange, 
   onDelete,
@@ -32,6 +36,7 @@ const Container: React.FC<ContainerProps> = ({
   // Items state
   const [notes, setNotes] = useState<NoteItemType[]>([]);
   const [links, setLinks] = useState<LinkItemType[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
   
   // Drawing state for notes containers
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -40,6 +45,100 @@ const Container: React.FC<ContainerProps> = ({
   const [showCreateItemForm, setShowCreateItemForm] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const { socket } = useSocket(boardId);
+
+  // Load items from Firebase when container opens
+  useEffect(() => {
+    const loadItems = async () => {
+      if (container.type !== 'notes' && container.type !== 'links') return; // Only load items for notes and links containers
+      
+      setIsLoadingItems(true);
+      try {
+        const items = await itemService.getItems(boardId, container.id);
+        
+        // Separate notes and links
+        const notesList: NoteItemType[] = [];
+        const linksList: LinkItemType[] = [];
+        
+        items.forEach(item => {
+          if ('content' in item) {
+            notesList.push(item as NoteItemType);
+          } else {
+            linksList.push(item as LinkItemType);
+          }
+        });
+        
+        setNotes(notesList);
+        setLinks(linksList);
+        console.log(`[Container] Loaded ${notesList.length} notes and ${linksList.length} links for container ${container.id}`);
+      } catch (error) {
+        console.error(`[Container] Error loading items for container ${container.id}:`, error);
+      } finally {
+        setIsLoadingItems(false);
+      }
+    };
+
+    loadItems();
+  }, [boardId, container.id, container.type]);
+
+  // Real-time sync for items
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleItemCreated = (data: any) => {
+      if (data.containerId === container.id) {
+        const newItem = data.item;
+        if ('content' in newItem) {
+          setNotes(prev => [...prev, newItem as NoteItemType]);
+        } else {
+          setLinks(prev => [...prev, newItem as LinkItemType]);
+        }
+        console.log(`[Container] Real-time: Item created in container ${container.id}`);
+      }
+    };
+
+    const handleItemUpdated = (data: any) => {
+      if (data.containerId === container.id) {
+        const updatedItem = data.item;
+        if ('content' in updatedItem) {
+          setNotes(prev => 
+            prev.map(note => 
+              note.id === data.itemId 
+                ? { ...note, ...data.updates }
+                : note
+            )
+          );
+        } else {
+          setLinks(prev => 
+            prev.map(link => 
+              link.id === data.itemId 
+                ? { ...link, ...data.updates }
+                : link
+            )
+          );
+        }
+        console.log(`[Container] Real-time: Item updated in container ${container.id}`);
+      }
+    };
+
+    const handleItemDeleted = (data: any) => {
+      if (data.containerId === container.id) {
+        setNotes(prev => prev.filter(note => note.id !== data.itemId));
+        setLinks(prev => prev.filter(link => link.id !== data.itemId));
+        console.log(`[Container] Real-time: Item deleted from container ${container.id}`);
+      }
+    };
+
+    socket.on('itemCreated', handleItemCreated);
+    socket.on('itemUpdated', handleItemUpdated);
+    socket.on('itemDeleted', handleItemDeleted);
+
+    return () => {
+      socket.off('itemCreated', handleItemCreated);
+      socket.off('itemUpdated', handleItemUpdated);
+      socket.off('itemDeleted', handleItemDeleted);
+    };
+  }, [socket, container.id]);
 
   // Handle mouse down for dragging
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -85,38 +184,54 @@ const Container: React.FC<ContainerProps> = ({
 
   // Handle updating a note
   const handleUpdateNote = async (itemId: string, updates: Partial<NoteItemType>) => {
-    setNotes(prev => 
-      prev.map(note => 
-        note.id === itemId 
-          ? { ...note, ...updates, updatedAt: Date.now() }
-          : note
-      )
-    );
-    // TODO: Call API to update note
+    try {
+      const updatedNote = await itemService.updateItem(boardId, container.id, itemId, updates);
+      setNotes(prev => 
+        prev.map(note => 
+          note.id === itemId 
+            ? updatedNote as NoteItemType
+            : note
+        )
+      );
+    } catch (error) {
+      console.error(`[Container] Error updating note ${itemId}:`, error);
+    }
   };
 
   // Handle updating a link
   const handleUpdateLink = async (itemId: string, updates: Partial<LinkItemType>) => {
-    setLinks(prev => 
-      prev.map(link => 
-        link.id === itemId 
-          ? { ...link, ...updates, updatedAt: Date.now() }
-          : link
-      )
-    );
-    // TODO: Call API to update link
+    try {
+      const updatedLink = await itemService.updateItem(boardId, container.id, itemId, updates);
+      setLinks(prev => 
+        prev.map(link => 
+          link.id === itemId 
+            ? updatedLink as LinkItemType
+            : link
+        )
+      );
+    } catch (error) {
+      console.error(`[Container] Error updating link ${itemId}:`, error);
+    }
   };
 
   // Handle deleting a note
   const handleDeleteNote = async (itemId: string) => {
-    setNotes(prev => prev.filter(note => note.id !== itemId));
-    // TODO: Call API to delete note
+    try {
+      await itemService.deleteItem(boardId, container.id, itemId);
+      setNotes(prev => prev.filter(note => note.id !== itemId));
+    } catch (error) {
+      console.error(`[Container] Error deleting note ${itemId}:`, error);
+    }
   };
 
   // Handle deleting a link
   const handleDeleteLink = async (itemId: string) => {
-    setLinks(prev => prev.filter(link => link.id !== itemId));
-    // TODO: Call API to delete link
+    try {
+      await itemService.deleteItem(boardId, container.id, itemId);
+      setLinks(prev => prev.filter(link => link.id !== itemId));
+    } catch (error) {
+      console.error(`[Container] Error deleting link ${itemId}:`, error);
+    }
   };
 
   // Handle mouse move for dragging
@@ -377,7 +492,7 @@ const Container: React.FC<ContainerProps> = ({
         {container.type === 'notes' ? (
           isDrawingMode ? (
             <ContainerDrawing
-              boardId={container.boardId}
+              boardId={boardId}
               containerId={container.id}
               width={container.size.width - 32}
               height={container.size.height - 80}
@@ -385,7 +500,17 @@ const Container: React.FC<ContainerProps> = ({
             />
           ) : (
             <div>
-              {notes.length === 0 ? (
+              {isLoadingItems ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  color: '#9ca3af', 
+                  fontSize: '13px', 
+                  fontStyle: 'italic',
+                  padding: '20px 0'
+                }}>
+                  Loading notes...
+                </div>
+              ) : notes.length === 0 ? (
                 <div style={{ 
                   textAlign: 'center', 
                   color: '#9ca3af', 
@@ -409,7 +534,17 @@ const Container: React.FC<ContainerProps> = ({
           )
         ) : (
           <div>
-            {links.length === 0 ? (
+            {isLoadingItems ? (
+              <div style={{ 
+                textAlign: 'center', 
+                color: '#9ca3af', 
+                fontSize: '13px', 
+                fontStyle: 'italic',
+                padding: '20px 0'
+              }}>
+                Loading links...
+              </div>
+            ) : links.length === 0 ? (
               <div style={{ 
                 textAlign: 'center', 
                 color: '#9ca3af', 
@@ -438,6 +573,7 @@ const Container: React.FC<ContainerProps> = ({
         <div className="create-item-modal">
           <div className="create-item-modal-content">
             <CreateItemForm
+              boardId={boardId}
               containerId={container.id}
               containerPurpose={container.type}
               onCreateSuccess={handleCreateItem}
