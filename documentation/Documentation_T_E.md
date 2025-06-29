@@ -297,3 +297,58 @@ Every user in Firestore now has:
 - Social whiteboarding, achieved.
 
 ---
+
+# Online Friends: Who's Here Right Now? 👀
+
+## The Dream: See Your Friends Light Up
+
+What's better than having friends on your whiteboard? Knowing which ones are actually online, ready to collaborate, chat, or just vibe! We wanted to bring that classic "green dot" energy to our app—so you always know who's around.
+
+---
+
+## How It Works (Backend Wizardry)
+
+- **Socket.IO keeps track of everyone connected.**
+- When you open the Friends page, your client asks the backend: "Hey, which of my friends are online?"
+- The backend checks a global list of connected users and replies with just the UIDs of your online friends.
+- If a friend logs in or out, the list updates next time you open the page (or refresh your friends list).
+
+---
+
+## How It Works (Frontend Magic)
+
+- **Online Friends Section:** At the top of your Friends page, you'll see a special "Online Friends" card.
+- **Green Dot Power:** Each online friend gets a glowing green dot and a subtle highlight. If nobody's online, you get a friendly message instead (no FOMO, just facts).
+- **Real-Time Check:** When your friends list loads, the app emits a `getOnlineFriends` event with all your friends' UIDs. The backend responds with the list of who's online, and the UI updates instantly.
+
+---
+
+## Under the Hood
+
+- **Backend:**
+  - Tracks all connected user UIDs in a global Set.
+  - Listens for `getOnlineFriends` events and responds with the online subset.
+  - Cleans up the list when users disconnect.
+- **Frontend:**
+  - Emits `getOnlineFriends` after loading your friends.
+  - Listens for `onlineFriends` and updates the UI.
+  - Styles online friends with a green dot and a soft background.
+
+---
+
+## The Dev Journey (What Could Possibly Go Wrong?)
+
+- **Socket Events:** Had to make sure the backend only tells you about your friends, not the whole world.
+- **UI Polish:** Green dot, avatars, and a chill "no friends online" message for those quiet nights.
+- **Testing:** Opened two browsers, logged in as two users, and watched the green dots appear and disappear in real time. It's alive!
+
+---
+
+## TL;DR
+
+- See which friends are online, in real time.
+- Green dot = ready to collaborate!
+- Powered by Socket.IO and a sprinkle of frontend magic.
+- Social whiteboarding, now with presence.
+
+---
