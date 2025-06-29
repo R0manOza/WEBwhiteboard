@@ -49,6 +49,16 @@ router.post('/request', verifyTokenMiddleware, async (req: AuthenticatedRequest,
     await toUserRef.update({
       friendRequests: admin.firestore.FieldValue.arrayUnion(fromUid),
     });
+    // Emit socket event to recipient
+    const io = req.app.get('socketio');
+    if (io) {
+      console.log(`[SOCKET] Emitting 'friendRequestReceived' to`, toUid);
+      io.to(toUid).emit('friendRequestReceived', {
+        fromUid,
+        fromDisplayName: fromUser.displayName || '',
+        fromPhotoURL: fromUser.photoURL || '',
+      });
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Error sending friend request:', err);
@@ -78,6 +88,14 @@ router.post('/accept', verifyTokenMiddleware, async (req: AuthenticatedRequest, 
         friends: admin.firestore.FieldValue.arrayUnion(toUid),
       }),
     ]);
+    // Emit socket event to requester
+    const io = req.app.get('socketio');
+    if (io) {
+      console.log(`[SOCKET] Emitting 'friendRequestAccepted' to`, fromUid);
+      io.to(fromUid).emit('friendRequestAccepted', {
+        toUid,
+      });
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Error accepting friend request:', err);

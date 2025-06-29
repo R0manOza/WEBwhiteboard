@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirect
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './DashboardPage.css'; // Add this for custom styles
+import { useSocket } from '../hooks/useSocket';
 
 
 // Define a basic type for a board based on your shared types
@@ -49,6 +50,7 @@ function DashboardPage() {
   const [addFriendError, setAddFriendError] = useState<string | null>(null);
   const [addFriendLoading, setAddFriendLoading] = useState(false);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const { socket } = useSocket(user?.uid || 'dashboard');
 
   const fetchOwnerNames = useCallback(async (boardsData: SimpleBoard[], token: string) => {
     console.log('🔍 fetchOwnerNames called with boards:', boardsData);
@@ -278,6 +280,27 @@ function DashboardPage() {
   }, [user]);
 
   useEffect(() => { if (user) fetchFriendsAndRequests(); }, [user, fetchFriendsAndRequests]);
+
+  // Use socket for real-time friend updates
+  useEffect(() => {
+    if (!socket) return;
+    // Listen for friend request received
+    const onRequest = () => {
+      console.log('Received friendRequestReceived event');
+      fetchFriendsAndRequests();
+    };
+    // Listen for friend request accepted
+    const onAccepted = () => {
+      console.log('Received friendRequestAccepted event');
+      fetchFriendsAndRequests();
+    };
+    socket.on('friendRequestReceived', onRequest);
+    socket.on('friendRequestAccepted', onAccepted);
+    return () => {
+      socket.off('friendRequestReceived', onRequest);
+      socket.off('friendRequestAccepted', onAccepted);
+    };
+  }, [socket, fetchFriendsAndRequests]);
 
   // Add friend handler
   const handleAddFriend = async (e: React.FormEvent) => {
