@@ -28,6 +28,10 @@ export function initializeSocket(io: Server) {
     const user = (socket as any).user;
     console.log(`User connected: ${user.uid}`);
     
+    // Join personal room for notifications
+    socket.join(user.uid);
+    console.log(`Socket ${socket.id} joined personal room: ${user.uid}`);
+    
     // Increment active connections counter
     activeConnections++;
     console.log(`Active connections: ${activeConnections}`);
