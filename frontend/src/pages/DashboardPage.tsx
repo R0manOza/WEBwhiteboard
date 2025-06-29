@@ -18,6 +18,13 @@ interface OwnerNames {
   [ownerId: string]: string;
 }
 
+// Add types for friends
+interface FriendUser {
+  uid: string;
+  displayName: string;
+  photoURL?: string;
+}
+
 function DashboardPage() {
   const [boards, setBoards] = useState<SimpleBoard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +43,12 @@ function DashboardPage() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // board id being deleted
   const [boardFilter, setBoardFilter] = useState<'all' | 'public' | 'private'>('all');
   const [ownerNames, setOwnerNames] = useState<OwnerNames>({}); // New state for owner names
+  const [friends, setFriends] = useState<FriendUser[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendUser[]>([]);
+  const [addFriendUsername, setAddFriendUsername] = useState('');
+  const [addFriendError, setAddFriendError] = useState<string | null>(null);
+  const [addFriendLoading, setAddFriendLoading] = useState(false);
+  const [requestsLoading, setRequestsLoading] = useState(false);
 
   const fetchOwnerNames = useCallback(async (boardsData: SimpleBoard[], token: string) => {
     console.log('🔍 fetchOwnerNames called with boards:', boardsData);
@@ -247,6 +260,69 @@ function DashboardPage() {
       (board.description && board.description.toLowerCase().includes(lowercasedSearchTerm))
     );
   }, [boards, searchTerm, boardFilter]);
+
+  // Fetch friends and requests
+  const fetchFriendsAndRequests = useCallback(async () => {
+    if (!user) return;
+    const token = await user.getIdToken();
+    try {
+      const [friendsRes, requestsRes] = await Promise.all([
+        fetch('/api/friends/list', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/friends/requests', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      if (friendsRes.ok) setFriends(await friendsRes.json());
+      if (requestsRes.ok) setFriendRequests(await requestsRes.json());
+    } catch (err) {
+      // ignore
+    }
+  }, [user]);
+
+  useEffect(() => { if (user) fetchFriendsAndRequests(); }, [user, fetchFriendsAndRequests]);
+
+  // Add friend handler
+  const handleAddFriend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setAddFriendError(null);
+    setAddFriendLoading(true);
+    try {
+      if (!addFriendUsername.trim()) throw new Error('Enter a username');
+      const token = await user.getIdToken();
+      const res = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: addFriendUsername.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send request');
+      setAddFriendUsername('');
+      fetchFriendsAndRequests();
+    } catch (err: any) {
+      setAddFriendError(err.message || 'Failed to send request');
+    } finally {
+      setAddFriendLoading(false);
+    }
+  };
+
+  // Accept friend handler
+  const handleAcceptFriend = async (fromUid: string) => {
+    if (!user) return;
+    setRequestsLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/friends/accept', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromUid })
+      });
+      if (!res.ok) throw new Error('Failed to accept request');
+      fetchFriendsAndRequests();
+    } catch (err) {
+      // ignore
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
 
   // Render logic based on state
   return (
@@ -525,6 +601,56 @@ function DashboardPage() {
       )}
       </>
       )}
+
+      {/* Friends Section */}
+      <div className="friends-section" style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Friends</h2>
+        <form onSubmit={handleAddFriend} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input
+            type="text"
+            placeholder="Add friend by username..."
+            value={addFriendUsername}
+            onChange={e => setAddFriendUsername(e.target.value)}
+            disabled={addFriendLoading}
+            style={{ padding: 8, borderRadius: 8, border: '1px solid #ccc', flex: 1 }}
+          />
+          <button type="submit" className="btn-primary" disabled={addFriendLoading} style={{ minWidth: 120 }}>
+            {addFriendLoading ? 'Sending...' : 'Add Friend'}
+          </button>
+        </form>
+        {addFriendError && <div className="error-message">{addFriendError}</div>}
+        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 4 }}>Your Friends</h3>
+            {friends.length === 0 ? <div>No friends yet.</div> : (
+              <ul style={{ paddingLeft: 0, listStyle: 'none' }}>
+                {friends.map(f => (
+                  <li key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    {f.photoURL && <img src={f.photoURL} alt={f.displayName} style={{ width: 28, height: 28, borderRadius: '50%' }} />}
+                    <span>{f.displayName}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 4 }}>Pending Requests</h3>
+            {friendRequests.length === 0 ? <div>No requests.</div> : (
+              <ul style={{ paddingLeft: 0, listStyle: 'none' }}>
+                {friendRequests.map(r => (
+                  <li key={r.uid} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    {r.photoURL && <img src={r.photoURL} alt={r.displayName} style={{ width: 28, height: 28, borderRadius: '50%' }} />}
+                    <span>{r.displayName}</span>
+                    <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '0.95rem' }} disabled={requestsLoading} onClick={() => handleAcceptFriend(r.uid)}>
+                      Accept
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

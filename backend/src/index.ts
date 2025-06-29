@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes';
 import boardsRouter from './routes/boards';
 import statsRoutes from './routes/statsRoutes';
 import { initializeSocket } from './socket/socketHandler';
+import friendsRoutes from './routes/friendsRoutes';
 
 // Load environment variables from .env file
 import dotenv from 'dotenv';
@@ -79,6 +80,9 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // Auth routes (login, etc.)
 app.use('/api/auth', authRoutes);
+
+// Friends routes
+app.use('/api/friends', friendsRoutes);
 
 // Boards routes
 app.use('/api/boards', boardsRouter);

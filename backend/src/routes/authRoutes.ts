@@ -40,14 +40,24 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
                 photoURL: picture || '', 
                 createdAt: new Date().toISOString(),
                 lastLoginAt: new Date().toISOString(),
+                friends: [],
+                friendRequests: [],
+                sentRequests: [],
             });
             console.log(`New user created in Firestore: ${uid}`);
         } else {
-            // Existing user, update last login time
+            // Existing user, update last login time and ensure friend fields exist
             console.log('User exists in Firestore, updating lastLoginAt...');
-            await userRef.update({
+            const userData = userSnapshot.data();
+            const updateData: any = {
                 lastLoginAt: new Date().toISOString(),
-            });
+            };
+            if (userData) {
+                if (!userData.friends) updateData.friends = [];
+                if (!userData.friendRequests) updateData.friendRequests = [];
+                if (!userData.sentRequests) updateData.sentRequests = [];
+            }
+            await userRef.update(updateData);
             console.log(`User login updated in Firestore: ${uid}`);
         }
         console.log('Login process successful, sending 200 response.');
