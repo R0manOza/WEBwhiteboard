@@ -43,7 +43,8 @@ export const useSocket = (boardId: string): UseSocketResult => {
     const connectSocket = async () => {
       const token = await user.getIdToken();
       if (didCancel) return;
-      const newSocket = io('http://localhost:3001', {
+      const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+      const newSocket = io(socketUrl, {
         auth: { token },
       });
       socketRef.current = newSocket;

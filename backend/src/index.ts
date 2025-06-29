@@ -8,6 +8,9 @@ import boardsRouter from './routes/boards';
 import statsRoutes from './routes/statsRoutes';
 import { initializeSocket } from './socket/socketHandler';
 
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+dotenv.config();
 const app: Express = express();
 const port = process.env.PORT || 3001; // Backend port
 

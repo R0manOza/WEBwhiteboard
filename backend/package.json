@@ -37,6 +37,7 @@
     "@types/sinon": "^17.0.4",
     "@types/supertest": "^6.0.3",
     "chai": "^5.2.0",
+    "dotenv": "^16.6.1",
     "mocha": "^11.5.0",
     "nodemon": "^3.1.10",
     "sinon": "^20.0.0",
