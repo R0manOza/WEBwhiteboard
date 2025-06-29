@@ -166,3 +166,324 @@ button.secondary:hover:not(:disabled) {
     background-color: #d1d5db;
     border-color: #d1d5db;
 }
+
+/* --- Friends Section Modern Styles --- */
+.beautiful-friends-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 40px auto 0 auto;
+  background: linear-gradient(120deg, #f8fafc 60%, #e0e7ff 100%);
+  border-radius: 24px;
+  box-shadow: 0 4px 32px rgba(80, 100, 180, 0.08);
+  padding: 36px 32px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.friends-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.friends-title {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #2d3a5a;
+  margin: 0;
+  letter-spacing: -1px;
+}
+.add-friend-form {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 18px 0;
+  justify-content: flex-start;
+  max-width: 90%;
+  position: relative;
+  flex-wrap: wrap;
+}
+.add-friend-input-wrapper {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+.add-friend-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #bfc9e0;
+  font-size: 1.08rem;
+  background: #fff;
+  transition: border 0.2s;
+  box-shadow: 0 1px 4px #e0e7ff44;
+}
+.add-friend-input:focus {
+  border: 1.5px solid #6366f1;
+  outline: none;
+}
+.add-friend-btn {
+  margin-top: 0;
+  margin-left: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+.add-friend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.add-friend-autocomplete {
+  z-index: 10;
+  position: absolute;
+  top: 110%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #bfc9e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px #6366f122;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  animation: fadeIn 0.18s;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.autocomplete-item:hover:not(.disabled) {
+  background: #f1f5ff;
+  color: #6366f1;
+}
+.autocomplete-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.autocomplete-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e7ff;
+}
+.autocomplete-name {
+  font-weight: 500;
+}
+.autocomplete-label {
+  color: #6366f1;
+  font-size: 0.98rem;
+  margin-left: 8px;
+}
+.autocomplete-loading,
+.autocomplete-error {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 1.01rem;
+  color: #6366f1;
+  box-shadow: 0 2px 8px #6366f122;
+  z-index: 21;
+}
+.autocomplete-error {
+  color: #e11d48;
+  background: #fff0f3;
+}
+.friend-error-message {
+  color: #e11d48;
+  background: #fff0f3;
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin: 8px 0 0 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+.friends-lists-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+.friends-list-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px #6366f111;
+  padding: 28px 32px 24px 32px;
+  min-width: 260px;
+  flex: 1 1 320px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.friends-list-title {
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 14px;
+}
+.friends-empty {
+  color: #9ca3af;
+  font-size: 1.05rem;
+  padding: 8px 0;
+}
+.friends-list {
+  padding-left: 0;
+  list-style: none;
+  width: 100%;
+}
+.friend-list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+.friend-list-item:last-child {
+  border-bottom: none;
+}
+.friend-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e7ff;
+}
+.friend-name {
+  font-weight: 500;
+  color: #2d3a5a;
+  font-size: 1.08rem;
+}
+.accept-friend-btn {
+  margin-left: auto;
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 1.01rem;
+  font-weight: 500;
+  background: linear-gradient(90deg, #4f8cff 60%, #6366f1 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px #6366f122;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.accept-friend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+@media (max-width: 900px) {
+  .beautiful-friends-section {
+    padding: 24px 8px 24px 8px;
+  }
+  .friends-lists-row {
+    flex-direction: column;
+    gap: 18px;
+  }
+  .friends-list-card {
+    max-width: 100%;
+    padding: 20px 12px 18px 12px;
+  }
+  .add-friend-form {
+    max-width: 100%;
+    margin: 0 0 12px 0;
+    flex-direction: row;
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .add-friend-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .add-friend-btn {
+    width: 100%;
+    margin-top: 6px;
+  }
+}
+
+/* --- Dashboard User Info Row and Friends Button --- */
+.dashboard-user-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.friends-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #e0e7ff;
+  color: #2d3a5a;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px 6px 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(80, 100, 180, 0.06);
+}
+.friends-nav-btn:hover {
+  background: #c7d2fe;
+}
+.dashboard-username {
+  font-weight: 500;
+  font-size: 1.08rem;
+  color: #2d3a5a;
+  margin-left: 2px;
+}
+.dashboard-profile-pic {
+  margin-left: 8px;
+  border: 2px solid #e0e7ff;
+  box-shadow: 0 1px 4px rgba(80, 100, 180, 0.08);
+}
+@media (max-width: 600px) {
+  .dashboard-user-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .friends-nav-btn {
+    width: 100%;
+    justify-content: flex-start;
+    font-size: 0.98rem;
+  }
+  .dashboard-profile-pic {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}
+
+.online-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-right: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 4px #22c55e99;
+}
+.friend-list-item.online {
+  background: #f0fdf4;
+}

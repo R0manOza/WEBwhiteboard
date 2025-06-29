@@ -135,6 +135,32 @@ router.get('/userInfo', verifyTokenMiddleware, async (req: AuthenticatedRequest,
         res.status(500).json({ error: 'Failed to fetch user info' });
     }
 });
+// User search endpoint for autocomplete (by displayName, starts with, case-insensitive)
+router.get('/users/search', verifyTokenMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+    const query = (req.query.query as string || '').trim();
+    if (!query) {
+        res.status(400).json({ error: 'Query is required' });
+        return;
+    }
+    try {
+        // Firestore is case-sensitive, so for case-insensitive search, fetch a range and filter in JS
+        const end = query.replace(/.$/, c => String.fromCharCode(c.charCodeAt(0) + 1));
+        const snap = await firestore.collection('users')
+            .where('displayName', '>=', query)
+            .where('displayName', '<', end)
+            .limit(10)
+            .get();
+        // Filter for case-insensitive match
+        const users = snap.docs
+            .map(doc => doc.data())
+            .filter(u => u.displayName && u.displayName.toLowerCase().startsWith(query.toLowerCase()))
+            .map(u => ({ uid: u.uid, displayName: u.displayName, photoURL: u.photoURL }));
+        res.json(users);
+    } catch (err) {
+        console.error('Error searching users:', err);
+        res.status(500).json({ error: 'Failed to search users' });
+    }
+});
 
 
 

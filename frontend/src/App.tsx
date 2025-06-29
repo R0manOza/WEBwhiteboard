@@ -9,6 +9,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import BoardViewPage from "./pages/BoardViewPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import FriendsPage from './pages/FriendsPage';
 
 // Import styling
 import "./App.css";
@@ -62,6 +63,12 @@ const AppNav = () => {
         {isAuthenticated && ( // <-- Shows Dashboard when logged in
           <Link to="/dashboard" className="nav-link">
             Dashboard
+          </Link>
+        )}
+        {/* Friends Link (Conditional) */}
+        {isAuthenticated && (
+          <Link to="/friends" className="nav-link">
+            Friends
           </Link>
         )}
         {/* --- START: BoardView Link (Conditional Placeholder) --- */}
@@ -159,6 +166,14 @@ function App() {
                     {/* This component handles auth check */}
                     <BoardViewPage />{" "}
                     {/* This is the component rendered if authenticated */}
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/friends"
+                element={
+                  <ProtectedRoute>
+                    <FriendsPage />
                   </ProtectedRoute>
                 }
               />
