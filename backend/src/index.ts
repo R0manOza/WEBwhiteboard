@@ -13,13 +13,26 @@ const port = process.env.PORT || 3001; // Backend port
 
 // Environment configuration
 const isProduction = process.env.NODE_ENV === 'production';
-const frontendUrl = process.env.FRONTEND_URL || (isProduction ? 'https://yourdomain.com' : 'http://localhost:5173');
+
+// CORS configuration for production
+let corsOrigin: string | string[] = 'http://localhost:5173'; // Default for development
+
+if (isProduction) {
+  // In production, allow multiple origins or use environment variable
+  const corsOriginEnv = process.env.CORS_ORIGIN;
+  if (corsOriginEnv) {
+    corsOrigin = corsOriginEnv.split(',').map(origin => origin.trim());
+  } else {
+    // Fallback for production without explicit CORS config
+    corsOrigin = ['http://localhost', 'https://localhost'];
+  }
+}
 
 // Set up the HTTP server and Socket.IO
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: frontendUrl,
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -31,7 +44,7 @@ const socketHandlers = initializeSocket(io);
 
 // CORS config for API routes
 const corsOptions = {
-  origin: frontendUrl,
+  origin: corsOrigin,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -56,7 +69,8 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    corsOrigin: corsOrigin
   });
 });
 
@@ -81,7 +95,7 @@ app.use((err: any, req: Request, res: Response, next: any) => {
 server.listen(port, () => {
   console.log(`Server listening on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Frontend URL: ${frontendUrl}`);
+  console.log(`CORS Origin: ${Array.isArray(corsOrigin) ? corsOrigin.join(', ') : corsOrigin}`);
 });
 
 // Make socket handlers available to the app
