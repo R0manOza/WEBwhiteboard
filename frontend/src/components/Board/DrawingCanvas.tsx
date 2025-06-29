@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../contexts/AuthContext';
+import { DrawingService } from '../../services/drawingService';
 import type { DrawingStroke, DrawingPoint } from '../../../../shared/types';
 
 interface DrawingCanvasProps {
@@ -88,6 +89,32 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   useEffect(() => {
     spacePressedRef.current = panMode;
   }, [panMode]);
+
+  // Load drawings from Firebase when component mounts or boardId changes
+  useEffect(() => {
+    if (!boardId || !user) return;
+
+    const loadDrawings = async () => {
+      try {
+        console.log(`Loading drawings for board ${boardId}`);
+        const drawingData = await DrawingService.loadBoardDrawing(boardId);
+        
+        if (drawingData && drawingData.strokes.length > 0) {
+          console.log(`Loaded ${drawingData.strokes.length} strokes for board ${boardId}`);
+          setDrawingState(prev => ({
+            ...prev,
+            strokes: drawingData.strokes
+          }));
+        } else {
+          console.log(`No saved drawings found for board ${boardId}`);
+        }
+      } catch (error) {
+        console.error('Error loading drawings:', error);
+      }
+    };
+
+    loadDrawings();
+  }, [boardId, user]);
 
   // Convert screen (canvas) coords to world coords
   const screenToWorld = (x: number, y: number) => {
@@ -214,13 +241,22 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     
     console.log('DrawingCanvas: Mouse up event triggered - finishing stroke');
     
+    const completedStroke = drawingState.currentStroke;
+    
     // Add current stroke to strokes array
     setDrawingState(prev => ({
       ...prev,
       isDrawing: false,
       currentStroke: null,
-      strokes: [...prev.strokes, prev.currentStroke!]
+      strokes: [...prev.strokes, completedStroke]
     }));
+    
+    // Save stroke to Firebase
+    if (user && boardId) {
+      DrawingService.addStroke(boardId, completedStroke).catch(error => {
+        console.error('Error saving stroke to Firebase:', error);
+      });
+    }
     
     // Emit drawing status
     socket?.emit('drawingStatus', { boardId, isDrawing: false });
@@ -228,9 +264,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     // Emit stroke end
     socket?.emit('strokeEnd', { 
       boardId, 
-      strokeId: drawingState.currentStroke.id
+      strokeId: completedStroke.id
     });
-  }, [drawingState.isDrawing, drawingState.currentStroke, boardId, socket]);
+  }, [drawingState.isDrawing, drawingState.currentStroke, boardId, socket, user]);
 
   // Handle mouse leave - stop drawing
   const handleMouseLeave = useCallback(() => {
@@ -319,16 +355,71 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       console.log(`User ${data.userId} is ${data.isDrawing ? 'drawing' : 'not drawing'}`);
     };
 
+    // Handle drawing persistence events
+    const handleDrawingSaved = (data: {
+      boardId: string;
+      strokes: DrawingStroke[];
+      lastUpdated: number;
+      userId: string;
+    }) => {
+      if (data.boardId !== boardId || data.userId === user?.uid) return;
+      
+      console.log(`Drawing saved by user ${data.userId} with ${data.strokes.length} strokes`);
+      setDrawingState(prev => ({
+        ...prev,
+        strokes: data.strokes
+      }));
+    };
+
+    const handleStrokeAdded = (data: {
+      boardId: string;
+      stroke: DrawingStroke;
+      userId: string;
+    }) => {
+      if (data.boardId !== boardId || data.userId === user?.uid) return;
+      
+      console.log(`Stroke added by user ${data.userId}: ${data.stroke.id}`);
+      setDrawingState(prev => ({
+        ...prev,
+        strokes: [...prev.strokes, data.stroke]
+      }));
+    };
+
+    const handleDrawingCleared = (data: {
+      boardId: string;
+      userId: string;
+    }) => {
+      if (data.boardId !== boardId || data.userId === user?.uid) return;
+      
+      console.log(`Drawing cleared by user ${data.userId}`);
+      setDrawingState(prev => ({
+        ...prev,
+        strokes: [],
+        otherUserStrokes: {},
+        currentStroke: null
+      }));
+      const context = getCanvasContext();
+      if (context) {
+        context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
+      }
+    };
+
     socket.on('strokeStart', handleStrokeStart);
     socket.on('strokePoint', handleStrokePoint);
     socket.on('strokeEnd', handleStrokeEnd);
     socket.on('userDrawingStatus', handleUserDrawingStatus);
+    socket.on('drawingSaved', handleDrawingSaved);
+    socket.on('strokeAdded', handleStrokeAdded);
+    socket.on('drawingCleared', handleDrawingCleared);
 
     return () => {
       socket.off('strokeStart', handleStrokeStart);
       socket.off('strokePoint', handleStrokePoint);
       socket.off('strokeEnd', handleStrokeEnd);
       socket.off('userDrawingStatus', handleUserDrawingStatus);
+      socket.off('drawingSaved', handleDrawingSaved);
+      socket.off('strokeAdded', handleStrokeAdded);
+      socket.off('drawingCleared', handleDrawingCleared);
     };
   }, [socket, isConnected, boardId, user, redrawCanvas]);
 
@@ -349,10 +440,18 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     setDrawingState(prev => {
       if (prev.strokes.length === 0) return prev;
       const newStrokes = prev.strokes.slice(0, -1);
+      
+      // Save updated state to Firebase
+      if (user && boardId && newStrokes.length >= 0) {
+        DrawingService.saveBoardDrawing(boardId, newStrokes).catch(error => {
+          console.error('Error saving drawing state after undo:', error);
+        });
+      }
+      
       return { ...prev, strokes: newStrokes };
     });
     // Redraw will be triggered by state update effect
-  }, []);
+  }, [boardId, user]);
 
   // Zoom in/out handlers for buttons
   const zoomBy = (factor: number) => {
@@ -631,6 +730,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           const context = getCanvasContext();
           if (context) {
             context.ctx.clearRect(0, 0, context.canvas.width, context.canvas.height);
+          }
+          // Clear from Firebase
+          if (user && boardId) {
+            DrawingService.clearBoardDrawing(boardId).catch(error => {
+              console.error('Error clearing drawing from Firebase:', error);
+            });
           }
           // Emit clear event to all users
           socket?.emit('clearBoardDrawing', { boardId });

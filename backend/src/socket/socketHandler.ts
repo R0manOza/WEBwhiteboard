@@ -186,6 +186,34 @@ export function initializeSocket(io: Server) {
       io.to(`board:${boardId}`).emit('clearBoardDrawing', { boardId });
     });
 
+    // Handle drawing persistence events
+    socket.on('drawingSaved', ({ boardId, strokes, lastUpdated }) => {
+      console.log(`Drawing saved from ${user.uid} on board ${boardId} with ${strokes.length} strokes`);
+      socket.to(`board:${boardId}`).emit('drawingSaved', {
+        boardId,
+        strokes,
+        lastUpdated,
+        userId: user.uid
+      });
+    });
+
+    socket.on('strokeAdded', ({ boardId, stroke }) => {
+      console.log(`Stroke added from ${user.uid} on board ${boardId}: ${stroke.id}`);
+      socket.to(`board:${boardId}`).emit('strokeAdded', {
+        boardId,
+        stroke,
+        userId: user.uid
+      });
+    });
+
+    socket.on('drawingCleared', ({ boardId }) => {
+      console.log(`Drawing cleared from ${user.uid} on board ${boardId}`);
+      socket.to(`board:${boardId}`).emit('drawingCleared', {
+        boardId,
+        userId: user.uid
+      });
+    });
+
     // Handle immediate container position updates (for real-time sync)
     socket.on('containerPositionUpdate', ({ boardId, containerId, position, userId }) => {
       console.log(`Container position update from ${user.uid} on board ${boardId}, container ${containerId}: (${position.x}, ${position.y})`);
