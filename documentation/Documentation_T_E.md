@@ -217,3 +217,83 @@ It wasn't all smooth sailing. Getting our tests to correctly mock Firebase's aut
 After a few rounds of refactoring, we landed on a stable and reliable mocking strategy that properly simulates the entire authentication lifecycle. It was a tough fight, but the result is a set of tests that we can trust.
 
 With this new testing foundation, we can now build new features with much more confidence, knowing that our automated safety net is there to catch us if we fall.
+
+# Friends System: Real-Time Social Awesomeness 🚀
+
+## The Dream: Make Whiteboard Social
+
+You know what's better than a collaborative whiteboard? A collaborative whiteboard with friends! We wanted users to be able to add each other, see who's online, and get that sweet dopamine hit when a friend request comes in. So, we built a **mutual friends system**—and made it real-time, too.
+
+---
+
+## How It Works (Backend Magic)
+
+### Firestore User Model Gets Social
+
+Every user in Firestore now has:
+- `friends`: Array of UIDs (your actual friends, not just people you wish were your friends)
+- `friendRequests`: Array of UIDs (people who want to be your friend)
+- `sentRequests`: Array of UIDs (people you've asked to be your friend, but they're still thinking about it)
+
+### API Endpoints (REST, but with a Heart)
+
+- `POST /api/friends/request` — Send a friend request by username. (No more "what's your UID, bro?")
+- `POST /api/friends/accept` — Accept a friend request. (Mutual, like a real friendship!)
+- `GET /api/friends/list` — Get your friends list.
+- `GET /api/friends/requests` — See who's waiting for your approval.
+
+### Real-Time: Socket.IO to the Rescue
+
+- When you send a friend request, the other user gets a **real-time notification** (no refresh needed!).
+- When your request is accepted, you get a **real-time update** and your friends list updates instantly.
+- How? Every user joins a personal Socket.IO room (named after their UID) on connect. Backend emits events like `friendRequestReceived` and `friendRequestAccepted` to the right room.
+
+---
+
+## How It Works (Frontend Vibes)
+
+### Dashboard: Your Social Command Center
+
+- **Friends List:** See all your friends, complete with avatars.
+- **Add Friend:** Type a username, hit "Add Friend," and cross your fingers.
+- **Pending Requests:** See who wants to be your friend, and accept them with a click.
+
+### Real-Time UI Updates
+
+- No more "refresh to see if you're popular." The Dashboard listens for friend events over Socket.IO and updates instantly.
+- If you're on the page, you'll see new requests and new friends appear like magic.
+
+### Under the Hood
+
+- Uses a custom `useSocket` hook to connect to your personal room.
+- Listens for `friendRequestReceived` and `friendRequestAccepted` events.
+- When an event comes in, it fetches the latest friends/requests and updates the UI.
+
+---
+
+## The Dev Journey (What Could Possibly Go Wrong?)
+
+- **TypeScript:** Yelled at us for possibly undefined stuff. We fixed it.
+- **Socket Rooms:** Had to make sure every user joined their own room for private notifications.
+- **Debugging:** Added logs everywhere. If you don't see a log, did it even happen?
+- **Testing:** Two browsers, two users, one friendship. It works in real time!
+
+---
+
+## What's Next?
+
+- Decline friend requests? (Ouch, but maybe necessary.)
+- Remove friends? (Sad, but sometimes you gotta.)
+- Toast notifications for friend events? (Because who doesn't love a good toast.)
+
+---
+
+## TL;DR
+
+- Add friends by username.
+- Accept requests for mutual friendship.
+- See everything update in real time—no refresh needed.
+- Powered by Firestore, REST, and Socket.IO.
+- Social whiteboarding, achieved.
+
+---
