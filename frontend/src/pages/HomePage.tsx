@@ -1,4 +1,5 @@
 import "./HomePage.css";
+import ActiveConnections from "../components/ActiveConnections";
 
 function HomePage() {
   return (
@@ -9,6 +10,9 @@ function HomePage() {
         Your collaborative space for organizing links and notes on shared
         boards.
       </p>
+      <div style={{ marginTop: '20px' }}>
+        <ActiveConnections />
+      </div>
       {/* You could add a link to login or dashboard here later */}
       {/* <p><a href="/login">Get Started</a></p> */}
     </div>

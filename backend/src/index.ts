@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import admin from './config/firebaseAdmin';
 import authRoutes from './routes/authRoutes';
 import boardsRouter from './routes/boards';
+import statsRoutes from './routes/statsRoutes';
 import { initializeSocket } from './socket/socketHandler';
 
 const app: Express = express();
@@ -26,7 +27,7 @@ const io = new Server(server, {
 });
 
 // Initialize all the socket stuff (see socketHandler.ts)
-initializeSocket(io);
+const socketHandlers = initializeSocket(io);
 
 // CORS config for API routes
 const corsOptions = {
@@ -65,6 +66,9 @@ app.use('/api/auth', authRoutes);
 // Boards routes
 app.use('/api/boards', boardsRouter);
 
+// Stats routes
+app.use('/api/stats', statsRoutes);
+
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: any) => {
   console.error('Error:', err);
@@ -80,7 +84,9 @@ server.listen(port, () => {
   console.log(`Frontend URL: ${frontendUrl}`);
 });
 
+// Make socket handlers available to the app
 app.set('socketio', io);
+app.set('socketHandlers', socketHandlers);
 
 //usefull features of express
 //app.get('/users', getAllUsers);

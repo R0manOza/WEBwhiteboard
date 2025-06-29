@@ -4,6 +4,12 @@ import admin from '../config/firebaseAdmin';
 export function initializeSocket(io: Server) {
   // In-memory map: boardId -> { userId: displayName }
   const onlineUsersByBoard: { [boardId: string]: { [userId: string]: string } } = {};
+  
+  // Global connection counter
+  let activeConnections = 0;
+
+  // Function to get active connections count (for API routes)
+  const getActiveConnections = () => activeConnections;
 
   // Authenticate socket connections using Firebase ID token
   io.use(async (socket, next) => {
@@ -21,6 +27,10 @@ export function initializeSocket(io: Server) {
   io.on('connection', (socket: Socket) => {
     const user = (socket as any).user;
     console.log(`User connected: ${user.uid}`);
+    
+    // Increment active connections counter
+    activeConnections++;
+    console.log(`Active connections: ${activeConnections}`);
 
     // Track which board rooms this socket has joined
     const joinedBoards = new Set<string>();
@@ -260,7 +270,13 @@ export function initializeSocket(io: Server) {
           });
         }
       }
-      console.log(`User disconnected: ${user.uid}`);
+      
+      // Decrement active connections counter
+      activeConnections = Math.max(0, activeConnections - 1);
+      console.log(`User disconnected: ${user.uid}. Active connections: ${activeConnections}`);
     });
   });
+
+  // Return the getter function for API routes
+  return { getActiveConnections };
 } 
