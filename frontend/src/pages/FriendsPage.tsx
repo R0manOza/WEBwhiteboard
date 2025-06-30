@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../hooks/useSocket';
-import '../App.css';
+import './FriendsPage.css';
 
 interface FriendUser {
   uid: string;
@@ -25,6 +25,7 @@ const FriendsPage: React.FC = () => {
   const [inputFocused, setInputFocused] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const [sentRequests, setSentRequests] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
 
   // Fetch friends and requests
   const fetchFriendsAndRequests = useCallback(async () => {
@@ -87,7 +88,7 @@ const FriendsPage: React.FC = () => {
     };
   }, [socket, user, friends]);
 
-  // Autocomplete: search users as you type
+  // Improved search: non-case sensitive and better debouncing
   useEffect(() => {
     if (!addFriendUsername.trim()) {
       setUserSearchResults([]);
@@ -106,14 +107,19 @@ const FriendsPage: React.FC = () => {
         });
         if (!res.ok) throw new Error('Failed to search users');
         const data = await res.json();
-        setUserSearchResults(data);
+        // Filter out current user and apply case-insensitive filtering
+        const filteredData = data.filter((u: FriendUser) => 
+          u.uid !== user.uid && 
+          u.displayName.toLowerCase().includes(addFriendUsername.trim().toLowerCase())
+        );
+        setUserSearchResults(filteredData);
       } catch (err: any) {
         setSearchError('Failed to search users');
         setUserSearchResults([]);
       } finally {
         setSearchLoading(false);
       }
-    }, 300); // debounce
+    }, 400); // Increased debounce time for better UX
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
@@ -128,7 +134,9 @@ const FriendsPage: React.FC = () => {
     try {
       if (!addFriendUsername.trim()) throw new Error('Enter a username');
       // Try to find the user in the search results for a more robust match
-      const selectedUser = userSearchResults.find(u => u.displayName.toLowerCase() === addFriendUsername.trim().toLowerCase());
+      const selectedUser = userSearchResults.find(u => 
+        u.displayName.toLowerCase() === addFriendUsername.trim().toLowerCase()
+      );
       const usernameToSend = selectedUser ? selectedUser.displayName : addFriendUsername.trim();
       const token = await user.getIdToken();
       const res = await fetch('/api/friends/request', {
@@ -139,6 +147,7 @@ const FriendsPage: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send request');
       setAddFriendUsername('');
+      setUserSearchResults([]);
       fetchFriendsAndRequests();
     } catch (err: any) {
       setAddFriendError(err.message || 'Failed to send request');
@@ -168,107 +177,239 @@ const FriendsPage: React.FC = () => {
   };
 
   return (
-    <section className="friends-section beautiful-friends-section">
-      <div className="friends-header-row">
-        <h2 className="friends-title">Friends</h2>
+    <div className="friends-page-container">
+      {/* Header Section */}
+      <div className="friends-header">
+        <h1 className="friends-page-title">Friends</h1>
+        <p className="friends-page-subtitle">Connect and collaborate with your friends</p>
       </div>
-      {addFriendError && <div className="error-message friend-error-message">{addFriendError}</div>}
-      <div className="friends-lists-row">
-        <div className="friends-list-card">
-          <h3 className="friends-list-title">Online Friends</h3>
-          {onlineFriends.length === 0 ? (
-            <div className="empty-friends-message">No friends are online right now.</div>
-          ) : (
-            <ul className="friends-list">
-              {onlineFriends.map(friend => (
-                <li key={friend.uid} className="friend-list-item online">
-                  <span className="online-dot" title="Online"></span>
-                  {friend.photoURL && <img src={friend.photoURL} alt={friend.displayName} className="friend-avatar" />}
-                  <span className="friend-name">{friend.displayName}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="friends-list-card">
-          <h3 className="friends-list-title">Your Friends</h3>
-          <form onSubmit={handleAddFriend} className="add-friend-form" autoComplete="off">
-            <div className="add-friend-input-wrapper">
-              <input
-                type="text"
-                className="add-friend-input"
-                placeholder="Add friend by username..."
-                value={addFriendUsername}
-                onChange={e => setAddFriendUsername(e.target.value)}
-                disabled={addFriendLoading}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setTimeout(() => setInputFocused(false), 150)}
-              />
-              {/* Autocomplete dropdown */}
-              {inputFocused && userSearchResults.length > 0 && (
-                <ul className="add-friend-autocomplete">
-                  {userSearchResults
-                    .filter(u => u.uid !== user?.uid)
-                    .map(u => {
-                      const alreadyFriend = friends.some(f => f.uid === u.uid);
-                      const requestSent = sentRequests.includes(u.uid);
-                      let label = '';
-                      if (alreadyFriend) label = 'Already friends';
-                      else if (requestSent) label = 'Request sent';
-                      return (
-                        <li
-                          key={u.uid}
-                          className={`autocomplete-item${alreadyFriend || requestSent ? ' disabled' : ''}`}
-                          onMouseDown={() => {
-                            if (alreadyFriend || requestSent) return;
-                            setAddFriendUsername(u.displayName);
-                            setInputFocused(false);
-                          }}
-                        >
-                          {u.photoURL && <img src={u.photoURL} alt={u.displayName} className="autocomplete-avatar" />}
-                          <span className="autocomplete-name">{u.displayName}</span>
-                          {label && <span className="autocomplete-label">({label})</span>}
-                        </li>
-                      );
-                    })}
-                </ul>
-              )}
-              {searchLoading && <div className="autocomplete-loading">Searching...</div>}
-              {searchError && <div className="autocomplete-error">{searchError}</div>}
+
+      {/* Tab Navigation */}
+      <div className="friends-tabs">
+        <button 
+          className={`friends-tab ${activeTab === 'friends' ? 'active' : ''}`}
+          onClick={() => setActiveTab('friends')}
+        >
+          <span className="tab-icon">👥</span>
+          <span className="tab-text">Friends</span>
+          {friends.length > 0 && <span className="tab-badge">{friends.length}</span>}
+        </button>
+        <button 
+          className={`friends-tab ${activeTab === 'requests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('requests')}
+        >
+          <span className="tab-icon">📨</span>
+          <span className="tab-text">Requests</span>
+          {friendRequests.length > 0 && <span className="tab-badge">{friendRequests.length}</span>}
+        </button>
+        <button 
+          className={`friends-tab ${activeTab === 'search' ? 'active' : ''}`}
+          onClick={() => setActiveTab('search')}
+        >
+          <span className="tab-icon">🔍</span>
+          <span className="tab-text">Find Friends</span>
+        </button>
+      </div>
+
+      {/* Content Sections */}
+      <div className="friends-content">
+        {/* Friends Tab */}
+        {activeTab === 'friends' && (
+          <div className="friends-section">
+            <div className="section-header">
+              <h2 className="section-title">My Friends</h2>
+              <div className="online-indicator">
+                <span className="online-dot"></span>
+                <span className="online-text">{onlineFriends.length} online</span>
+              </div>
             </div>
-            <button type="submit" className="btn-primary add-friend-btn" disabled={addFriendLoading}>
-              {addFriendLoading ? 'Sending...' : 'Add Friend'}
-            </button>
-          </form>
-          {friends.length === 0 ? <div className="friends-empty">No friends yet.</div> : (
-            <ul className="friends-list">
-              {friends.map(f => (
-                <li key={f.uid} className="friend-list-item">
-                  {f.photoURL && <img src={f.photoURL} alt={f.displayName} className="friend-avatar" />}
-                  <span className="friend-name">{f.displayName}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="friends-list-card">
-          <h3 className="friends-list-title">Pending Requests</h3>
-          {friendRequests.length === 0 ? <div className="friends-empty">No requests.</div> : (
-            <ul className="friends-list">
-              {friendRequests.map(r => (
-                <li key={r.uid} className="friend-list-item">
-                  {r.photoURL && <img src={r.photoURL} alt={r.displayName} className="friend-avatar" />}
-                  <span className="friend-name">{r.displayName}</span>
-                  <button className="btn-primary accept-friend-btn" disabled={requestsLoading} onClick={() => handleAcceptFriend(r.uid)}>
-                    Accept
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            
+            {friends.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">👥</div>
+                <h3 className="empty-title">No friends yet</h3>
+                <p className="empty-description">
+                  Start building your network by finding and adding friends!
+                </p>
+                <button 
+                  className="empty-action-btn"
+                  onClick={() => setActiveTab('search')}
+                >
+                  Find Friends
+                </button>
+              </div>
+            ) : (
+              <div className="friends-grid">
+                {friends.map(friend => (
+                  <div key={friend.uid} className="friend-card">
+                    <div className="friend-avatar-container">
+                      {friend.photoURL ? (
+                        <img src={friend.photoURL} alt={friend.displayName} className="friend-avatar" />
+                      ) : (
+                        <div className="friend-avatar-placeholder">
+                          {friend.displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {onlineFriends.some(f => f.uid === friend.uid) && (
+                        <span className="friend-online-indicator" title="Online"></span>
+                      )}
+                    </div>
+                    <div className="friend-info">
+                      <h3 className="friend-name">{friend.displayName}</h3>
+                      <span className="friend-status">
+                        {onlineFriends.some(f => f.uid === friend.uid) ? 'Online' : 'Offline'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Requests Tab */}
+        {activeTab === 'requests' && (
+          <div className="friends-section">
+            <div className="section-header">
+              <h2 className="section-title">Friend Requests</h2>
+              <span className="section-subtitle">People who want to connect with you</span>
+            </div>
+            
+            {friendRequests.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📨</div>
+                <h3 className="empty-title">No pending requests</h3>
+                <p className="empty-description">
+                  When someone sends you a friend request, it will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="requests-list">
+                {friendRequests.map(request => (
+                  <div key={request.uid} className="request-card">
+                    <div className="request-avatar-container">
+                      {request.photoURL ? (
+                        <img src={request.photoURL} alt={request.displayName} className="request-avatar" />
+                      ) : (
+                        <div className="request-avatar-placeholder">
+                          {request.displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="request-info">
+                      <h3 className="request-name">{request.displayName}</h3>
+                      <p className="request-message">wants to be your friend</p>
+                    </div>
+                    <div className="request-actions">
+                      <button 
+                        className="accept-btn"
+                        onClick={() => handleAcceptFriend(request.uid)}
+                        disabled={requestsLoading}
+                      >
+                        {requestsLoading ? 'Accepting...' : 'Accept'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Search Tab */}
+        {activeTab === 'search' && (
+          <div className="friends-section">
+            <div className="section-header">
+              <h2 className="section-title">Find Friends</h2>
+              <span className="section-subtitle">Search for users to add as friends</span>
+            </div>
+            
+            <form onSubmit={handleAddFriend} className="search-form">
+              <div className="search-input-container">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search by username..."
+                  value={addFriendUsername}
+                  onChange={e => setAddFriendUsername(e.target.value)}
+                  disabled={addFriendLoading}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setTimeout(() => setInputFocused(false), 150)}
+                />
+                <button type="submit" className="search-btn" disabled={addFriendLoading}>
+                  {addFriendLoading ? 'Sending...' : 'Add Friend'}
+                </button>
+              </div>
+              
+              {addFriendError && (
+                <div className="error-message">{addFriendError}</div>
+              )}
+              
+              {/* Search Results */}
+              {inputFocused && (userSearchResults.length > 0 || searchLoading || searchError) && (
+                <div className="search-results">
+                  {searchLoading && (
+                    <div className="search-loading">
+                      <div className="loading-spinner"></div>
+                      <span>Searching...</span>
+                    </div>
+                  )}
+                  
+                  {searchError && (
+                    <div className="search-error">
+                      <span>⚠️</span>
+                      <span>{searchError}</span>
+                    </div>
+                  )}
+                  
+                  {!searchLoading && !searchError && userSearchResults.length === 0 && addFriendUsername.trim() && (
+                    <div className="no-results">
+                      <span>🔍</span>
+                      <span>No users found matching "{addFriendUsername}"</span>
+                    </div>
+                  )}
+                  
+                  {userSearchResults.length > 0 && (
+                    <div className="search-results-list">
+                      {userSearchResults.map(u => {
+                        const alreadyFriend = friends.some(f => f.uid === u.uid);
+                        const requestSent = sentRequests.includes(u.uid);
+                        return (
+                          <div
+                            key={u.uid}
+                            className={`search-result-item ${alreadyFriend || requestSent ? 'disabled' : ''}`}
+                            onClick={() => {
+                              if (alreadyFriend || requestSent) return;
+                              setAddFriendUsername(u.displayName);
+                              setInputFocused(false);
+                            }}
+                          >
+                            <div className="result-avatar-container">
+                              {u.photoURL ? (
+                                <img src={u.photoURL} alt={u.displayName} className="result-avatar" />
+                              ) : (
+                                <div className="result-avatar-placeholder">
+                                  {u.displayName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="result-info">
+                              <span className="result-name">{u.displayName}</span>
+                              {alreadyFriend && <span className="result-status already-friend">Already friends</span>}
+                              {requestSent && <span className="result-status request-sent">Request sent</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </form>
+          </div>
+        )}
       </div>
-    </section>
+    </div>
   );
 };
 

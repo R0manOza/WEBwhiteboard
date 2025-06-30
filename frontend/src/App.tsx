@@ -65,12 +65,6 @@ const AppNav = () => {
             Dashboard
           </Link>
         )}
-        {/* Friends Link (Conditional) */}
-        {isAuthenticated && (
-          <Link to="/friends" className="nav-link">
-            Friends
-          </Link>
-        )}
         {/* --- START: BoardView Link (Conditional Placeholder) --- */}
         {isAuthenticated && ( // <-- Shows Board View link when logged in
           // NOTE: This is a placeholder linking to a hardcoded ID.
@@ -95,6 +89,11 @@ const AppNav = () => {
           // Show user info and sign-out button if authenticated
           // Access user.photoURL and user.displayName here
           <div className="user-info">
+            {/* Friends Link - positioned to the left of everything */}
+            <Link to="/friends" className="friends-nav-link">
+              <span className="friends-icon">👥</span>
+              <span className="friends-text">Friends</span>
+            </Link>
             {/* Display Google profile picture - only if photoURL exists */}
             {user.photoURL && (
               <img
